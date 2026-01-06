@@ -1,6 +1,12 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-secondary: #6b7280;
+  --spacing-section: 2rem;
+  --radius-container: 0.75rem;
+}
 
 :root {
   --color-light: #ffffff;
