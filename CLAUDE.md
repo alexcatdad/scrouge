@@ -5,17 +5,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-# Development (runs Tailwind watcher + Bun server with HMR)
+# Development (runs Vite dev server with HMR)
 bun run dev
 
-# Run individual parts separately
-bun run dev:tailwind   # CSS watcher
-bun run dev:server     # Bun server with --hot
+# Run Convex backend separately
 bun run dev:backend    # Convex backend (convex dev)
 
-# Build
-bun run build:css      # Compile Tailwind CSS
-bun run build          # Build CSS + bundle for production
+# Build for production
+bun run build          # Vite production build (outputs to dist/)
+
+# Preview production build locally
+bun run preview        # Vite preview server
+
+# Serve production build with Bun
+bun run serve          # Bun server serving dist/
 
 # Lint (TypeScript type checking)
 bun run lint           # Runs tsc on both convex/ and src/
@@ -23,25 +26,32 @@ bun run lint           # Runs tsc on both convex/ and src/
 
 ## Architecture
 
-This is a subscription tracking app built with **Bun + Convex + React**.
+This is a subscription tracking app built with **Vite + Bun + Convex + React**.
 
 ### Stack
-- **Runtime**: Bun (not Node.js)
+- **Build Tool**: Vite (development server + production bundler)
+- **Runtime**: Bun (production server)
 - **Backend**: Convex (serverless database + functions)
 - **Frontend**: React 19 with Tailwind CSS v4
 - **Auth**: @convex-dev/auth (password, anonymous, GitHub OAuth, Authentik OIDC)
 - **AI**: Vercel AI SDK with multiple providers (OpenAI, xAI, Mistral, Ollama)
+- **Env Validation**: @t3-oss/env-core with Zod
 
 ### Directory Structure
 ```
-index.ts          # Bun server - serves HTML and transpiles TSX
+index.ts          # Bun production server - serves Vite build output
 index.html        # Entry point - loads src/main.tsx
+vite.config.ts    # Vite configuration
 src/
   App.tsx         # Main app component with auth state
   SignInForm.tsx  # Multi-provider auth form
+  main.tsx        # React entry point with Convex client
   components/     # Feature components (Dashboard, Chat, Subscriptions, etc.)
+  lib/
+    env.ts        # Type-safe environment variables (t3-env)
+    monitoring.ts # Error monitoring (Sentry integration)
   index.css       # Tailwind source CSS
-  dist.css        # Compiled CSS (generated)
+  vite-env.d.ts   # TypeScript declarations for import.meta.env
 convex/
   schema.ts       # Database schema (extends authTables)
   auth.ts         # Auth configuration
@@ -50,11 +60,14 @@ convex/
   chat.ts         # AI chat with tool calling
   subscriptions.ts, paymentMethods.ts, aiSettings.ts  # CRUD operations
   lib/encryption.ts  # API key encryption utilities
+dist/             # Vite build output (generated)
 ```
 
 ### Key Patterns
 
-**Bun Server**: The `index.ts` file serves HTML and transpiles TypeScript/TSX on-the-fly. It injects `CONVEX_URL` into the HTML at runtime.
+**Environment Variables**: Uses `@t3-oss/env-core` for type-safe, validated environment variables via Vite's `import.meta.env`. See `src/lib/env.ts` for the schema.
+
+**Vite Build**: Development uses Vite's dev server with HMR. Production builds are bundled by Vite and served by the Bun server (`index.ts`).
 
 **Convex Functions**: Always use new function syntax with validators:
 ```typescript
@@ -71,8 +84,10 @@ export const myQuery = query({
 
 ## Environment Variables
 
-**Local** (in `.env`):
-- `CONVEX_URL` - Convex deployment URL
+**Local** (in `.env` or `.env.local`):
+- `VITE_CONVEX_URL` - Convex deployment URL (required, baked into build)
+- `VITE_SENTRY_DSN` - Sentry DSN for error monitoring (optional)
+- `PORT` - Server port for production (defaults to 3000)
 
 **Convex Dashboard**:
 - `AI_ENCRYPTION_KEY` - For encrypting user API keys (generate with `openssl rand -hex 32`)
@@ -84,16 +99,16 @@ export const myQuery = query({
 The app is containerized with Docker and deployed via Gitea Actions.
 
 ```bash
-# Build Docker image locally
-docker build -t scrouge .
+# Build Docker image locally (requires VITE_CONVEX_URL at build time)
+docker build --build-arg VITE_CONVEX_URL=https://your-deployment.convex.cloud -t scrouge .
 
 # Run locally with docker-compose
 docker compose up
 
 # Or run directly
-docker run -p 3000:3000 -e CONVEX_URL=https://tough-hound-59.convex.cloud scrouge
+docker run -p 3000:3000 scrouge
 ```
 
 **CI/CD**: Push to `main` branch triggers `.gitea/workflows/deploy.yaml` which builds, pushes to Gitea Container Registry, and deploys via SSH.
 
-**Required Gitea Secrets**: `REGISTRY_TOKEN`, `CONVEX_URL`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
+**Required Gitea Secrets**: `REGISTRY_TOKEN`, `VITE_CONVEX_URL`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`

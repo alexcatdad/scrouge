@@ -3,13 +3,18 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import "./index.css";
 import App from "./App";
+import { initMonitoring } from "./lib/monitoring";
+import { env } from "./lib/env";
 
-const convexUrl = (window as any).CONVEX_URL;
-if (!convexUrl) {
-  throw new Error("CONVEX_URL environment variable is required. Please set it in your .env file.");
-}
+// Initialize error monitoring (Sentry)
+// Set VITE_SENTRY_DSN environment variable to enable
+void initMonitoring({
+  dsn: env.VITE_SENTRY_DSN,
+  environment: import.meta.env.MODE,
+});
 
-const convex = new ConvexReactClient(convexUrl);
+// Create Convex client with validated environment variable
+const convex = new ConvexReactClient(env.VITE_CONVEX_URL);
 
 createRoot(document.getElementById("root")!).render(
   <ConvexAuthProvider client={convex}>

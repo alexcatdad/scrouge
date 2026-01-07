@@ -4,13 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun tailwindcss --watch -i ./src/index.css -o ./src/dist.css & bun --hot index.ts",
-    "dev:tailwind": "bun tailwindcss --watch -i ./src/index.css -o ./src/dist.css",
-    "dev:server": "bun --hot index.ts",
+    "dev": "vite",
     "dev:backend": "convex dev",
-    "build:css": "bun tailwindcss -i ./src/index.css -o ./src/dist.css",
-    "build": "bun run build:css && bun build index.html --outdir dist",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "bun run index.ts",
     "lint": "tsc -p convex --noEmit --pretty false && tsc -p . --noEmit --pretty false && convex dev --once",
+    "test": "bun test tests/",
+    "test:unit": "bun test tests/",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed"
@@ -20,6 +21,8 @@
     "@ai-sdk/openai": "latest",
     "@ai-sdk/xai": "latest",
     "@convex-dev/auth": "^0.0.80",
+    "@mlc-ai/web-llm": "^0.2.80",
+    "@t3-oss/env-core": "^0.11.0",
     "ai": "latest",
     "clsx": "^2.1.1",
     "convex": "^1.24.2",
@@ -40,6 +43,7 @@
     "@types/node": "^22.13.10",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.0",
     "eslint": "^9.21.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
@@ -47,6 +51,7 @@
     "prettier": "^3.5.3",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.7.2",
-    "typescript-eslint": "^8.24.1"
+    "typescript-eslint": "^8.24.1",
+    "vite": "^6.0.0"
   }
 }
