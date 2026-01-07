@@ -65,6 +65,21 @@ const applicationTables = {
   })
     .index("by_service", ["serviceName"])
     .index("by_website", ["website"]),
+
+  userAISettings: defineTable({
+    userId: v.id("users"),
+    provider: v.union(
+      v.literal("openai"),
+      v.literal("xai"),
+      v.literal("mistral"),
+      v.literal("ollama")
+    ),
+    encryptedApiKey: v.string(),
+    modelId: v.optional(v.string()),
+    ollamaBaseUrl: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
 };
 
 export default defineSchema({

@@ -1,111 +1,99 @@
----
-description: Use Bun instead of Node.js, npm, pnpm, or vite.
-globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
-alwaysApply: false
----
+# CLAUDE.md
 
-Default to using Bun instead of Node.js.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
+## Commands
 
-## APIs
+```bash
+# Development (runs Tailwind watcher + Bun server with HMR)
+bun run dev
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+# Run individual parts separately
+bun run dev:tailwind   # CSS watcher
+bun run dev:server     # Bun server with --hot
+bun run dev:backend    # Convex backend (convex dev)
 
-## Testing
+# Build
+bun run build:css      # Compile Tailwind CSS
+bun run build          # Build CSS + bundle for production
 
-Use `bun test` to run tests.
+# Lint (TypeScript type checking)
+bun run lint           # Runs tsc on both convex/ and src/
+```
 
-```ts#index.test.ts
-import { test, expect } from "bun:test";
+## Architecture
 
-test("hello world", () => {
-  expect(1).toBe(1);
+This is a subscription tracking app built with **Bun + Convex + React**.
+
+### Stack
+- **Runtime**: Bun (not Node.js)
+- **Backend**: Convex (serverless database + functions)
+- **Frontend**: React 19 with Tailwind CSS v4
+- **Auth**: @convex-dev/auth (password, anonymous, GitHub OAuth, Authentik OIDC)
+- **AI**: Vercel AI SDK with multiple providers (OpenAI, xAI, Mistral, Ollama)
+
+### Directory Structure
+```
+index.ts          # Bun server - serves HTML and transpiles TSX
+index.html        # Entry point - loads src/main.tsx
+src/
+  App.tsx         # Main app component with auth state
+  SignInForm.tsx  # Multi-provider auth form
+  components/     # Feature components (Dashboard, Chat, Subscriptions, etc.)
+  index.css       # Tailwind source CSS
+  dist.css        # Compiled CSS (generated)
+convex/
+  schema.ts       # Database schema (extends authTables)
+  auth.ts         # Auth configuration
+  http.ts         # HTTP router (auth routes only - don't modify)
+  router.ts       # User-defined HTTP routes (modify this one)
+  chat.ts         # AI chat with tool calling
+  subscriptions.ts, paymentMethods.ts, aiSettings.ts  # CRUD operations
+  lib/encryption.ts  # API key encryption utilities
+```
+
+### Key Patterns
+
+**Bun Server**: The `index.ts` file serves HTML and transpiles TypeScript/TSX on-the-fly. It injects `CONVEX_URL` into the HTML at runtime.
+
+**Convex Functions**: Always use new function syntax with validators:
+```typescript
+export const myQuery = query({
+  args: { id: v.id("table") },
+  returns: v.object({...}),
+  handler: async (ctx, args) => {...}
 });
 ```
 
-## Frontend
+**Database Access**: Use `ctx.db` in queries/mutations. Actions cannot access the database directly - use `ctx.runQuery`/`ctx.runMutation`.
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
+**AI Chat**: The chat system uses Vercel AI SDK with tool calling. User API keys are encrypted at rest using AES-256-GCM (requires `AI_ENCRYPTION_KEY` env var in Convex dashboard).
 
-Server:
+## Environment Variables
 
-```ts#index.ts
-import index from "./index.html"
+**Local** (in `.env`):
+- `CONVEX_URL` - Convex deployment URL
 
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
+**Convex Dashboard**:
+- `AI_ENCRYPTION_KEY` - For encrypting user API keys (generate with `openssl rand -hex 32`)
+- `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` - GitHub OAuth (optional)
+- `AUTH_AUTHENTIK_ID`, `AUTH_AUTHENTIK_SECRET`, `AUTH_AUTHENTIK_ISSUER` - Authentik OIDC (optional)
+
+## Deployment
+
+The app is containerized with Docker and deployed via Gitea Actions.
+
+```bash
+# Build Docker image locally
+docker build -t scrouge .
+
+# Run locally with docker-compose
+docker compose up
+
+# Or run directly
+docker run -p 3000:3000 -e CONVEX_URL=https://tough-hound-59.convex.cloud scrouge
 ```
 
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
+**CI/CD**: Push to `main` branch triggers `.gitea/workflows/deploy.yaml` which builds, pushes to Gitea Container Registry, and deploys via SSH.
 
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
-
-With the following `frontend.tsx`:
-
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
-
-// import .css files directly and it works
-import './index.css';
-
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-Then, run index.ts
-
-```sh
-bun --hot ./index.ts
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+**Required Gitea Secrets**: `REGISTRY_TOKEN`, `CONVEX_URL`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`

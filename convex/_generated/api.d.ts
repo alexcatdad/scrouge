@@ -8,41 +8,60 @@
  * @module
  */
 
-import type {
-  ApiFromModules,
-  FilterApi,
-  FunctionReference,
-} from "convex/server";
+import type * as aiSettings from "../aiSettings.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as http from "../http.js";
+import type * as lib_aiProvider from "../lib/aiProvider.js";
+import type * as lib_encryption from "../lib/encryption.js";
 import type * as paymentMethods from "../paymentMethods.js";
 import type * as pricing from "../pricing.js";
 import type * as router from "../router.js";
 import type * as subscriptions from "../subscriptions.js";
 
+import type {
+  ApiFromModules,
+  FilterApi,
+  FunctionReference,
+} from "convex/server";
+
+declare const fullApi: ApiFromModules<{
+  aiSettings: typeof aiSettings;
+  auth: typeof auth;
+  chat: typeof chat;
+  http: typeof http;
+  "lib/aiProvider": typeof lib_aiProvider;
+  "lib/encryption": typeof lib_encryption;
+  paymentMethods: typeof paymentMethods;
+  pricing: typeof pricing;
+  router: typeof router;
+  subscriptions: typeof subscriptions;
+}>;
+
 /**
- * A utility for referencing Convex functions in your app's API.
+ * A utility for referencing Convex functions in your app's public API.
  *
  * Usage:
  * ```js
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-declare const fullApi: ApiFromModules<{
-  auth: typeof auth;
-  chat: typeof chat;
-  http: typeof http;
-  paymentMethods: typeof paymentMethods;
-  pricing: typeof pricing;
-  router: typeof router;
-  subscriptions: typeof subscriptions;
-}>;
 export declare const api: FilterApi<
   typeof fullApi,
   FunctionReference<any, "public">
 >;
+
+/**
+ * A utility for referencing Convex functions in your app's internal API.
+ *
+ * Usage:
+ * ```js
+ * const myFunctionReference = internal.myModule.myFunction;
+ * ```
+ */
 export declare const internal: FilterApi<
   typeof fullApi,
   FunctionReference<any, "internal">
 >;
+
+export declare const components: {};

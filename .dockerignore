@@ -1,0 +1,10 @@
+node_modules
+.git
+.env*
+convex/_generated
+dist
+*.log
+.DS_Store
+.gitea
+.cursor
+.claude

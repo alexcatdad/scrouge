@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -125,5 +125,20 @@ export const remove = mutation({
     }
     
     return await ctx.db.delete(args.id);
+  },
+});
+
+/**
+ * Internal query to list payment methods for a specific user (called from chat action)
+ */
+export const listInternal = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("paymentMethods")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
   },
 });

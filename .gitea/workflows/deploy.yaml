@@ -1,0 +1,46 @@
+name: Build and Deploy
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ${{ gitea.server_url }}
+  IMAGE_NAME: ${{ gitea.repository }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to Gitea Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ gitea.actor }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest .
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ gitea.sha }} .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ gitea.sha }}
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            docker login ${{ env.REGISTRY }} -u ${{ gitea.actor }} -p ${{ secrets.REGISTRY_TOKEN }}
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            docker stop scrouge || true
+            docker rm scrouge || true
+            docker run -d \
+              --name scrouge \
+              --restart unless-stopped \
+              -p 3000:3000 \
+              -e CONVEX_URL=${{ secrets.CONVEX_URL }} \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest

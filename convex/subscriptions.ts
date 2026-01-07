@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
@@ -185,5 +185,197 @@ export const getTotalCost = query({
     }, {} as Record<string, number>);
     
     return totals;
+  },
+});
+
+/**
+ * Internal mutation to create a subscription (called from chat action)
+ */
+export const createInternal = internalMutation({
+  args: {
+    userId: v.id("users"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    cost: v.number(),
+    currency: v.string(),
+    billingCycle: v.union(
+      v.literal("monthly"),
+      v.literal("yearly"),
+      v.literal("weekly"),
+      v.literal("daily")
+    ),
+    nextBillingDate: v.number(),
+    paymentMethodId: v.id("paymentMethods"),
+    category: v.string(),
+    website: v.optional(v.string()),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, ...subscriptionData } = args;
+    
+    return await ctx.db.insert("subscriptions", {
+      userId,
+      ...subscriptionData,
+      isActive: true,
+    });
+  },
+});
+
+/**
+ * Internal mutation to update a subscription (called from chat action)
+ */
+export const updateInternal = internalMutation({
+  args: {
+    id: v.id("subscriptions"),
+    userId: v.id("users"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    cost: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    billingCycle: v.optional(v.union(
+      v.literal("monthly"),
+      v.literal("yearly"),
+      v.literal("weekly"),
+      v.literal("daily")
+    )),
+    nextBillingDate: v.optional(v.number()),
+    paymentMethodId: v.optional(v.id("paymentMethods")),
+    category: v.optional(v.string()),
+    website: v.optional(v.string()),
+    isActive: v.optional(v.boolean()),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, userId, ...updates } = args;
+    
+    const subscription = await ctx.db.get(id);
+    if (!subscription || subscription.userId !== userId) {
+      throw new Error("Subscription not found or access denied");
+    }
+    
+    return await ctx.db.patch(id, updates);
+  },
+});
+
+/**
+ * Internal query to list subscriptions for a specific user (called from chat action)
+ */
+export const listInternal = internalQuery({
+  args: {
+    userId: v.id("users"),
+    activeOnly: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db
+      .query("subscriptions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId));
+    
+    if (args.activeOnly) {
+      query = ctx.db
+        .query("subscriptions")
+        .withIndex("by_user_and_active", (q) => 
+          q.eq("userId", args.userId).eq("isActive", true)
+        );
+    }
+    
+    const subscriptions = await query.collect();
+    
+    // Get payment methods for each subscription
+    const subscriptionsWithPayment = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const paymentMethod = await ctx.db.get(sub.paymentMethodId);
+        return {
+          ...sub,
+          paymentMethod,
+        };
+      })
+    );
+    
+    return subscriptionsWithPayment;
+  },
+});
+
+/**
+ * Migration mutation to import guest data when user signs up
+ * Maps local payment method IDs to new Convex IDs
+ */
+export const migrateFromGuest = mutation({
+  args: {
+    paymentMethods: v.array(
+      v.object({
+        localId: v.string(),
+        name: v.string(),
+        type: v.union(
+          v.literal("credit_card"),
+          v.literal("debit_card"),
+          v.literal("bank_account"),
+          v.literal("paypal"),
+          v.literal("other")
+        ),
+        lastFourDigits: v.optional(v.string()),
+        expiryDate: v.optional(v.string()),
+        isDefault: v.boolean(),
+      })
+    ),
+    subscriptions: v.array(
+      v.object({
+        localId: v.string(),
+        name: v.string(),
+        description: v.optional(v.string()),
+        cost: v.number(),
+        currency: v.string(),
+        billingCycle: v.union(
+          v.literal("monthly"),
+          v.literal("yearly"),
+          v.literal("weekly"),
+          v.literal("daily")
+        ),
+        nextBillingDate: v.number(),
+        paymentMethodLocalId: v.string(),
+        category: v.string(),
+        website: v.optional(v.string()),
+        isActive: v.boolean(),
+        notes: v.optional(v.string()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getLoggedInUser(ctx);
+    
+    // Map local payment method IDs to new Convex IDs
+    const localIdToConvexId: Record<string, any> = {};
+    
+    // First, insert all payment methods and build the ID mapping
+    for (const pm of args.paymentMethods) {
+      const { localId, ...pmData } = pm;
+      const newId = await ctx.db.insert("paymentMethods", {
+        userId,
+        ...pmData,
+      });
+      localIdToConvexId[localId] = newId;
+    }
+    
+    // Then, insert all subscriptions with mapped payment method IDs
+    for (const sub of args.subscriptions) {
+      const { localId, paymentMethodLocalId, ...subData } = sub;
+      const paymentMethodId = localIdToConvexId[paymentMethodLocalId];
+      
+      if (!paymentMethodId) {
+        // Skip subscriptions with missing payment methods
+        console.warn(`Skipping subscription "${sub.name}" - payment method not found`);
+        continue;
+      }
+      
+      await ctx.db.insert("subscriptions", {
+        userId,
+        ...subData,
+        paymentMethodId,
+      });
+    }
+    
+    return {
+      migratedPaymentMethods: args.paymentMethods.length,
+      migratedSubscriptions: args.subscriptions.length,
+    };
   },
 });
