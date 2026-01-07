@@ -37,9 +37,19 @@ export interface LocalSubscription {
   createdAt: number;
 }
 
+export type ChatMessageRole = "user" | "assistant";
+
+export interface LocalChatMessage {
+  id?: number;
+  content: string;
+  role: ChatMessageRole;
+  timestamp: number;
+}
+
 export class GuestDB extends Dexie {
   subscriptions!: Table<LocalSubscription, number>;
   paymentMethods!: Table<LocalPaymentMethod, number>;
+  chatMessages!: Table<LocalChatMessage, number>;
 
   constructor() {
     super("scrougeGuest");
@@ -48,12 +58,19 @@ export class GuestDB extends Dexie {
         "++id, localId, name, nextBillingDate, paymentMethodLocalId, isActive",
       paymentMethods: "++id, localId, isDefault",
     });
+    this.version(2).stores({
+      subscriptions:
+        "++id, localId, name, nextBillingDate, paymentMethodLocalId, isActive",
+      paymentMethods: "++id, localId, isDefault",
+      chatMessages: "++id, timestamp",
+    });
   }
 
   // Clear all guest data (used after migration)
   async clearAllData(): Promise<void> {
     await this.subscriptions.clear();
     await this.paymentMethods.clear();
+    await this.chatMessages.clear();
   }
 
   // Check if there's any guest data
@@ -61,6 +78,11 @@ export class GuestDB extends Dexie {
     const subCount = await this.subscriptions.count();
     const pmCount = await this.paymentMethods.count();
     return subCount > 0 || pmCount > 0;
+  }
+
+  // Clear chat messages only
+  async clearChatMessages(): Promise<void> {
+    await this.chatMessages.clear();
   }
 }
 

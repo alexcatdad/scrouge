@@ -1,11 +1,30 @@
-import { action, query, mutation, internalMutation } from "./_generated/server";
+import { action, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
+
+// Shared validator for pricing plan
+const pricingPlanValidator = v.object({
+  name: v.string(),
+  price: v.number(),
+  currency: v.string(),
+  billingCycle: v.string(),
+  features: v.array(v.string()),
+});
+
+// Shared validator for service pricing
+const servicePricingValidator = v.object({
+  serviceName: v.string(),
+  website: v.string(),
+  plans: v.array(pricingPlanValidator),
+  lastUpdated: v.number(),
+});
 
 export const fetchServicePricing = action({
   args: { 
     serviceName: v.string(),
     website: v.string(),
   },
+  returns: servicePricingValidator,
   handler: async (ctx, args) => {
     // This is a placeholder for actual web scraping or API integration
     // In a real implementation, you would use web scraping libraries or service APIs
@@ -50,15 +69,10 @@ export const storePricing = internalMutation({
   args: {
     serviceName: v.string(),
     website: v.string(),
-    plans: v.array(v.object({
-      name: v.string(),
-      price: v.number(),
-      currency: v.string(),
-      billingCycle: v.string(),
-      features: v.array(v.string()),
-    })),
+    plans: v.array(pricingPlanValidator),
     lastUpdated: v.number(),
   },
+  returns: v.id("servicePricing"),
   handler: async (ctx, args) => {
     // Check if pricing already exists
     const existing = await ctx.db
@@ -67,7 +81,8 @@ export const storePricing = internalMutation({
       .first();
     
     if (existing) {
-      return await ctx.db.patch(existing._id, args);
+      await ctx.db.patch(existing._id, args);
+      return existing._id;
     } else {
       return await ctx.db.insert("servicePricing", args);
     }
@@ -76,6 +91,17 @@ export const storePricing = internalMutation({
 
 export const getPricing = query({
   args: { serviceName: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("servicePricing"),
+      _creationTime: v.number(),
+      serviceName: v.string(),
+      website: v.string(),
+      plans: v.array(pricingPlanValidator),
+      lastUpdated: v.number(),
+    }),
+    v.null()
+  ),
   handler: async (ctx, args) => {
     return await ctx.db
       .query("servicePricing")
@@ -83,5 +109,3 @@ export const getPricing = query({
       .first();
   },
 });
-
-import { internal } from "./_generated/api";

@@ -1,10 +1,24 @@
-import { query, mutation, internalAction, internalMutation } from "./_generated/server";
+import { query, mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { generateText, tool } from "ai";
 import { z } from "zod";
 import { getModel } from "./lib/aiProvider";
+
+// Shared validators
+const billingCycleValidator = v.union(
+  v.literal("monthly"),
+  v.literal("yearly"),
+  v.literal("weekly"),
+  v.literal("daily")
+);
+
+const toolResultValidator = v.object({
+  success: v.boolean(),
+  message: v.string(),
+  subscriptionId: v.optional(v.id("subscriptions")),
+});
 
 async function getLoggedInUser(ctx: any) {
   const userId = await getAuthUserId(ctx);
@@ -14,101 +28,62 @@ async function getLoggedInUser(ctx: any) {
   return userId;
 }
 
-export const getMessages = query({
-  args: { limit: v.optional(v.number()) },
-  handler: async (ctx, args) => {
-    const userId = await getLoggedInUser(ctx);
-    const limit = args.limit || 50;
-    
-    return await ctx.db
-      .query("chatMessages")
-      .withIndex("by_user_and_timestamp", (q) => q.eq("userId", userId))
-      .order("desc")
-      .take(limit);
-  },
-});
+// Type for AI settings returned from internal query
+type AISettings = {
+  provider: "openai" | "xai" | "mistral" | "ollama" | "webllm";
+  apiKey: string;
+  modelId?: string;
+  ollamaBaseUrl?: string;
+} | null;
 
-export const sendMessage = mutation({
-  args: { 
-    content: v.string(),
-    subscriptionId: v.optional(v.id("subscriptions")),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getLoggedInUser(ctx);
-    
-    // Store user message
-    const userMessageId = await ctx.db.insert("chatMessages", {
-      userId,
-      content: args.content,
-      role: "user",
-      subscriptionId: args.subscriptionId,
-      timestamp: Date.now(),
-    });
-    
-    // Schedule AI response
-    await ctx.scheduler.runAfter(0, internal.chat.generateResponse, {
-      userId,
-      userMessage: args.content,
-      subscriptionId: args.subscriptionId,
-    });
-    
-    return userMessageId;
-  },
-});
+// Type for subscription context
+type SubscriptionContext = Array<{
+  _id: string;
+  name: string;
+  cost: number;
+  currency: string;
+  billingCycle: string;
+  isActive: boolean;
+}>;
 
-export const generateResponse = internalAction({
+// Type for payment method context
+type PaymentMethodContext = Array<{
+  _id: string;
+  name: string;
+  isDefault: boolean;
+}>;
+
+/**
+ * Generate an AI response for a user message.
+ * This is a public action that returns the response directly (no server-side storage).
+ * Chat messages are stored client-side in Dexie.
+ */
+export const generateResponse = action({
   args: {
-    userId: v.id("users"),
     userMessage: v.string(),
-    subscriptionId: v.optional(v.id("subscriptions")),
   },
-  handler: async (ctx, args) => {
+  returns: v.string(),
+  handler: async (ctx, args): Promise<string> => {
+    const userId = await getLoggedInUser(ctx);
+
     // Get user's AI settings (with decrypted API key)
-    // Use internal query - type assertion needed until API regenerates
-    const aiSettings = await ctx.runQuery(
-      (internal as any).aiSettings?.getDecrypted || 
-      // Fallback function that will be replaced once API regenerates
-      (async (ctx: any, args: any) => {
-        const settings = await ctx.db
-          .query("userAISettings")
-          .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
-          .first();
-        if (!settings) return null;
-        const { decrypt } = await import("./lib/encryption");
-        return { ...settings, apiKey: await decrypt(settings.encryptedApiKey) };
-      }) as any,
-      { userId: args.userId }
-    );
-    
-    if (!aiSettings) {
-      await ctx.runMutation(internal.chat.storeMessage, {
-        userId: args.userId,
-        content: "Please configure your AI provider settings first. Go to Settings to add your API key.",
-        role: "assistant",
-        subscriptionId: args.subscriptionId,
-      });
-      return;
-    }
+    const aiSettings: AISettings = await ctx.runQuery(internal.aiSettings.getDecrypted, {
+      userId,
+    });
 
     if (!aiSettings) {
-      await ctx.runMutation(internal.chat.storeMessage, {
-        userId: args.userId,
-        content: "Please configure your AI provider settings first. Go to Settings to add your API key.",
-        role: "assistant",
-        subscriptionId: args.subscriptionId,
-      });
-      return;
+      return "Please configure your AI provider settings first. Go to Settings to add your API key.";
     }
 
     // Get user's subscriptions and payment methods for context
-    const subscriptions = await ctx.runQuery(internal.subscriptions.listInternal, {
-      userId: args.userId,
+    const subscriptions: SubscriptionContext = await ctx.runQuery(internal.subscriptions.listInternal, {
+      userId,
     });
-    const paymentMethods = await ctx.runQuery(internal.paymentMethods.listInternal, {
-      userId: args.userId,
+    const paymentMethods: PaymentMethodContext = await ctx.runQuery(internal.paymentMethods.listInternal, {
+      userId,
     });
 
-    const systemPrompt = `You are a helpful assistant for managing subscriptions. You can help users:
+    const systemPrompt: string = `You are a helpful assistant for managing subscriptions. You can help users:
 1. Add new subscriptions
 2. Update existing subscriptions
 3. Cancel subscriptions
@@ -131,7 +106,7 @@ If they mention a service name, try to provide helpful information about typical
         modelId: aiSettings.modelId,
       });
 
-      const result = await generateText({
+      const result: { text: string } = await generateText({
         model,
         system: systemPrompt,
         prompt: args.userMessage,
@@ -155,19 +130,19 @@ If they mention a service name, try to provide helpful information about typical
               const now = Date.now();
               let nextBillingDate = now;
               const oneDay = 24 * 60 * 60 * 1000;
-              
+
               switch (params.billingCycle) {
                 case "daily":
                   nextBillingDate = now + oneDay;
                   break;
                 case "weekly":
-                  nextBillingDate = now + (7 * oneDay);
+                  nextBillingDate = now + 7 * oneDay;
                   break;
                 case "monthly":
-                  nextBillingDate = now + (30 * oneDay);
+                  nextBillingDate = now + 30 * oneDay;
                   break;
                 case "yearly":
-                  nextBillingDate = now + (365 * oneDay);
+                  nextBillingDate = now + 365 * oneDay;
                   break;
               }
 
@@ -187,7 +162,7 @@ If they mention a service name, try to provide helpful information about typical
 
               try {
                 const subscriptionId = await ctx.runMutation(internal.subscriptions.createInternal, {
-                  userId: args.userId,
+                  userId,
                   name: params.name,
                   cost: params.cost,
                   currency: params.currency || "USD",
@@ -227,7 +202,7 @@ If they mention a service name, try to provide helpful information about typical
               try {
                 await ctx.runMutation(internal.subscriptions.updateInternal, {
                   id: params.subscriptionId as any,
-                  userId: args.userId,
+                  userId,
                   name: params.name,
                   cost: params.cost,
                   billingCycle: params.billingCycle,
@@ -255,7 +230,7 @@ If they mention a service name, try to provide helpful information about typical
               try {
                 await ctx.runMutation(internal.subscriptions.updateInternal, {
                   id: params.subscriptionId as any,
-                  userId: args.userId,
+                  userId,
                   isActive: false,
                 });
                 return {
@@ -273,37 +248,280 @@ If they mention a service name, try to provide helpful information about typical
         },
       });
 
-      // Store assistant response
-      await ctx.runMutation(internal.chat.storeMessage, {
-        userId: args.userId,
-        content: result.text,
-        role: "assistant",
-        subscriptionId: args.subscriptionId,
-      });
-
+      return result.text;
     } catch (error: any) {
-      console.error("Error generating response:", error);
-      await ctx.runMutation(internal.chat.storeMessage, {
-        userId: args.userId,
-        content: `I'm sorry, I encountered an error processing your request: ${error.message}. Please try again.`,
-        role: "assistant",
-        subscriptionId: args.subscriptionId,
-      });
+      return `I'm sorry, I encountered an error processing your request: ${error.message}. Please try again.`;
     }
   },
 });
 
-export const storeMessage = internalMutation({
+/**
+ * Execute a tool call from local (WebLLM) inference
+ * Returns the result of the tool execution
+ */
+export const executeLocalToolCall = mutation({
   args: {
-    userId: v.id("users"),
-    content: v.string(),
-    role: v.union(v.literal("user"), v.literal("assistant")),
-    subscriptionId: v.optional(v.id("subscriptions")),
+    toolName: v.string(),
+    toolArgs: v.object({
+      // addSubscription args
+      name: v.optional(v.string()),
+      cost: v.optional(v.number()),
+      currency: v.optional(v.string()),
+      billingCycle: v.optional(billingCycleValidator),
+      paymentMethodId: v.optional(v.string()),
+      category: v.optional(v.string()),
+      website: v.optional(v.string()),
+      description: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      billingDay: v.optional(v.number()),
+      // updateSubscription / cancelSubscription args
+      subscriptionId: v.optional(v.string()),
+      subscriptionName: v.optional(v.string()),
+      isActive: v.optional(v.boolean()),
+    }),
   },
+  returns: toolResultValidator,
   handler: async (ctx, args) => {
-    return await ctx.db.insert("chatMessages", {
-      ...args,
-      timestamp: Date.now(),
-    });
+    const userId = await getLoggedInUser(ctx);
+    const { toolName, toolArgs } = args;
+
+    // Get user's payment methods for default selection
+    const paymentMethods = await ctx.db
+      .query("paymentMethods")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    // Get user's subscriptions for name-based lookups
+    const subscriptions = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    switch (toolName) {
+      case "addSubscription": {
+        if (!toolArgs.name || !toolArgs.cost || !toolArgs.billingCycle) {
+          return {
+            success: false,
+            message: "Missing required fields: name, cost, or billingCycle",
+          };
+        }
+
+        // Calculate next billing date
+        const now = new Date();
+        let nextBillingDate: number;
+        const oneDay = 24 * 60 * 60 * 1000;
+
+        if (toolArgs.billingDay && toolArgs.billingDay >= 1 && toolArgs.billingDay <= 31) {
+          // Set to specific day of month
+          const targetDay = toolArgs.billingDay;
+          const currentDay = now.getDate();
+
+          if (currentDay < targetDay) {
+            // This month
+            now.setDate(targetDay);
+          } else {
+            // Next month
+            now.setMonth(now.getMonth() + 1);
+            now.setDate(targetDay);
+          }
+          nextBillingDate = now.getTime();
+        } else {
+          // Default: calculate based on billing cycle from today
+          switch (toolArgs.billingCycle) {
+            case "daily":
+              nextBillingDate = Date.now() + oneDay;
+              break;
+            case "weekly":
+              nextBillingDate = Date.now() + 7 * oneDay;
+              break;
+            case "monthly":
+              nextBillingDate = Date.now() + 30 * oneDay;
+              break;
+            case "yearly":
+              nextBillingDate = Date.now() + 365 * oneDay;
+              break;
+            default:
+              nextBillingDate = Date.now() + 30 * oneDay;
+          }
+        }
+
+        // Get payment method
+        let paymentMethodId = toolArgs.paymentMethodId;
+        if (!paymentMethodId && paymentMethods.length > 0) {
+          const defaultMethod = paymentMethods.find((pm) => pm.isDefault);
+          paymentMethodId = defaultMethod?._id ?? paymentMethods[0]._id;
+        }
+
+        if (!paymentMethodId) {
+          return {
+            success: false,
+            message: "No payment method available. Please add a payment method first.",
+          };
+        }
+
+        try {
+          const subscriptionId = await ctx.db.insert("subscriptions", {
+            userId,
+            name: toolArgs.name,
+            cost: toolArgs.cost,
+            currency: toolArgs.currency || "USD",
+            billingCycle: toolArgs.billingCycle,
+            nextBillingDate,
+            paymentMethodId: paymentMethodId as any,
+            category: toolArgs.category || "Other",
+            website: toolArgs.website,
+            description: toolArgs.description,
+            notes: toolArgs.notes,
+            isActive: true,
+          });
+
+          return {
+            success: true,
+            message: `Successfully added ${toolArgs.name} subscription ($${toolArgs.cost}/${toolArgs.billingCycle})`,
+            subscriptionId,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            message: `Failed to add subscription: ${error.message}`,
+          };
+        }
+      }
+
+      case "updateSubscription": {
+        // Find subscription by ID or name
+        const subscription = toolArgs.subscriptionId
+          ? subscriptions.find((s) => s._id === toolArgs.subscriptionId)
+          : toolArgs.subscriptionName
+            ? subscriptions.find((s) => s.name.toLowerCase() === toolArgs.subscriptionName!.toLowerCase())
+            : null;
+
+        if (!subscription) {
+          return {
+            success: false,
+            message: toolArgs.subscriptionName
+              ? `Subscription "${toolArgs.subscriptionName}" not found`
+              : "Subscription not found",
+          };
+        }
+
+        try {
+          const updates: Record<string, any> = {};
+          if (toolArgs.name !== undefined) updates.name = toolArgs.name;
+          if (toolArgs.cost !== undefined) updates.cost = toolArgs.cost;
+          if (toolArgs.billingCycle !== undefined) updates.billingCycle = toolArgs.billingCycle;
+          if (toolArgs.isActive !== undefined) updates.isActive = toolArgs.isActive;
+
+          await ctx.db.patch(subscription._id, updates);
+
+          return {
+            success: true,
+            message: `Successfully updated ${subscription.name}${toolArgs.cost ? ` to $${toolArgs.cost}` : ""}`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            message: `Failed to update subscription: ${error.message}`,
+          };
+        }
+      }
+
+      case "cancelSubscription": {
+        // Find subscription by ID or name
+        const subscription = toolArgs.subscriptionId
+          ? subscriptions.find((s) => s._id === toolArgs.subscriptionId)
+          : toolArgs.subscriptionName
+            ? subscriptions.find((s) => s.name.toLowerCase() === toolArgs.subscriptionName!.toLowerCase())
+            : null;
+
+        if (!subscription) {
+          return {
+            success: false,
+            message: toolArgs.subscriptionName
+              ? `Subscription "${toolArgs.subscriptionName}" not found`
+              : "Subscription not found",
+          };
+        }
+
+        try {
+          await ctx.db.patch(subscription._id, { isActive: false });
+
+          return {
+            success: true,
+            message: `Successfully cancelled ${subscription.name}`,
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            message: `Failed to cancel subscription: ${error.message}`,
+          };
+        }
+      }
+
+      default:
+        return {
+          success: false,
+          message: `Unknown tool: ${toolName}`,
+        };
+    }
+  },
+});
+
+/**
+ * Get context data for local inference (subscriptions and payment methods)
+ */
+export const getLocalInferenceContext = query({
+  args: {},
+  returns: v.object({
+    subscriptions: v.array(
+      v.object({
+        _id: v.id("subscriptions"),
+        name: v.string(),
+        cost: v.number(),
+        currency: v.string(),
+        billingCycle: billingCycleValidator,
+        isActive: v.boolean(),
+        category: v.string(),
+      })
+    ),
+    paymentMethods: v.array(
+      v.object({
+        _id: v.id("paymentMethods"),
+        name: v.string(),
+        lastFourDigits: v.optional(v.string()),
+        isDefault: v.boolean(),
+      })
+    ),
+  }),
+  handler: async (ctx) => {
+    const userId = await getLoggedInUser(ctx);
+
+    const subscriptions = await ctx.db
+      .query("subscriptions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const paymentMethods = await ctx.db
+      .query("paymentMethods")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    return {
+      subscriptions: subscriptions.map((s) => ({
+        _id: s._id,
+        name: s.name,
+        cost: s.cost,
+        currency: s.currency,
+        billingCycle: s.billingCycle,
+        isActive: s.isActive,
+        category: s.category,
+      })),
+      paymentMethods: paymentMethods.map((pm) => ({
+        _id: pm._id,
+        name: pm.name,
+        lastFourDigits: pm.lastFourDigits,
+        isDefault: pm.isDefault,
+      })),
+    };
   },
 });

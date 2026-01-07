@@ -6,6 +6,8 @@ import { Toaster } from "sonner";
 import { SubscriptionDashboard } from "./components/SubscriptionDashboard";
 import { GuestModeProvider, useGuestMode } from "./lib/guestMode";
 import { useMigration } from "./lib/useMigration";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { I18nProvider } from "./lib/i18n";
 
 function AppContent() {
   const { isGuest, exitGuestMode } = useGuestMode();
@@ -75,9 +77,13 @@ function AppContent() {
 
 export default function App() {
   return (
-    <GuestModeProvider>
-      <AppContent />
-    </GuestModeProvider>
+    <ErrorBoundary>
+      <I18nProvider>
+        <GuestModeProvider>
+          <AppContent />
+        </GuestModeProvider>
+      </I18nProvider>
+    </ErrorBoundary>
   );
 }
 

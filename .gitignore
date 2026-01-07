@@ -28,3 +28,7 @@ src/dist.css
 
 # Bun
 bun.lockb
+
+# Test reports and results
+playwright-report/
+test-results/

@@ -41,16 +41,6 @@ const applicationTables = {
     isDefault: v.boolean(),
   }).index("by_user", ["userId"]),
 
-  chatMessages: defineTable({
-    userId: v.id("users"),
-    content: v.string(),
-    role: v.union(v.literal("user"), v.literal("assistant")),
-    subscriptionId: v.optional(v.id("subscriptions")),
-    timestamp: v.number(),
-  })
-    .index("by_user", ["userId"])
-    .index("by_user_and_timestamp", ["userId", "timestamp"]),
-
   servicePricing: defineTable({
     serviceName: v.string(),
     website: v.string(),
@@ -72,7 +62,8 @@ const applicationTables = {
       v.literal("openai"),
       v.literal("xai"),
       v.literal("mistral"),
-      v.literal("ollama")
+      v.literal("ollama"),
+      v.literal("webllm")
     ),
     encryptedApiKey: v.string(),
     modelId: v.optional(v.string()),
@@ -80,6 +71,27 @@ const applicationTables = {
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  // MCP API keys for external integrations
+  mcpApiKeys: defineTable({
+    userId: v.id("users"),
+    keyHash: v.string(), // SHA-256 hash of the API key
+    name: v.string(), // User-friendly name for the key
+    lastUsed: v.optional(v.number()),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()), // Optional expiration
+    isActive: v.boolean(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_key_hash", ["keyHash"]),
+
+  // Rate limiting table for tracking request counts
+  rateLimits: defineTable({
+    key: v.string(), // Unique key combining operation type and identifier
+    count: v.number(), // Number of requests in current window
+    windowStart: v.number(), // Start time of current window
+    lastRequest: v.number(), // Timestamp of last request
+  }).index("by_key", ["key"]),
 };
 
 export default defineSchema({

@@ -2,6 +2,27 @@ import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+// Shared validator for payment method type
+const paymentMethodTypeValidator = v.union(
+  v.literal("credit_card"),
+  v.literal("debit_card"),
+  v.literal("bank_account"),
+  v.literal("paypal"),
+  v.literal("other")
+);
+
+// Shared validator for payment method document
+const paymentMethodValidator = v.object({
+  _id: v.id("paymentMethods"),
+  _creationTime: v.number(),
+  userId: v.id("users"),
+  name: v.string(),
+  type: paymentMethodTypeValidator,
+  lastFourDigits: v.optional(v.string()),
+  expiryDate: v.optional(v.string()),
+  isDefault: v.boolean(),
+});
+
 async function getLoggedInUser(ctx: any) {
   const userId = await getAuthUserId(ctx);
   if (!userId) {
@@ -12,6 +33,7 @@ async function getLoggedInUser(ctx: any) {
 
 export const list = query({
   args: {},
+  returns: v.array(paymentMethodValidator),
   handler: async (ctx) => {
     const userId = await getLoggedInUser(ctx);
     
@@ -25,17 +47,12 @@ export const list = query({
 export const create = mutation({
   args: {
     name: v.string(),
-    type: v.union(
-      v.literal("credit_card"),
-      v.literal("debit_card"),
-      v.literal("bank_account"),
-      v.literal("paypal"),
-      v.literal("other")
-    ),
+    type: paymentMethodTypeValidator,
     lastFourDigits: v.optional(v.string()),
     expiryDate: v.optional(v.string()),
     isDefault: v.optional(v.boolean()),
   },
+  returns: v.id("paymentMethods"),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
     
@@ -65,17 +82,12 @@ export const update = mutation({
   args: {
     id: v.id("paymentMethods"),
     name: v.optional(v.string()),
-    type: v.optional(v.union(
-      v.literal("credit_card"),
-      v.literal("debit_card"),
-      v.literal("bank_account"),
-      v.literal("paypal"),
-      v.literal("other")
-    )),
+    type: v.optional(paymentMethodTypeValidator),
     lastFourDigits: v.optional(v.string()),
     expiryDate: v.optional(v.string()),
     isDefault: v.optional(v.boolean()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
     const { id, ...updates } = args;
@@ -99,12 +111,14 @@ export const update = mutation({
       }
     }
     
-    return await ctx.db.patch(id, updates);
+    await ctx.db.patch(id, updates);
+    return null;
   },
 });
 
 export const remove = mutation({
   args: { id: v.id("paymentMethods") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
     
@@ -124,7 +138,8 @@ export const remove = mutation({
       throw new Error("Cannot delete payment method that is being used by subscriptions");
     }
     
-    return await ctx.db.delete(args.id);
+    await ctx.db.delete(args.id);
+    return null;
   },
 });
 
@@ -135,6 +150,7 @@ export const listInternal = internalQuery({
   args: {
     userId: v.id("users"),
   },
+  returns: v.array(paymentMethodValidator),
   handler: async (ctx, args) => {
     return await ctx.db
       .query("paymentMethods")

@@ -2,6 +2,56 @@ import { query, mutation, internalMutation, internalQuery } from "./_generated/s
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
+// Shared validators
+const billingCycleValidator = v.union(
+  v.literal("monthly"),
+  v.literal("yearly"),
+  v.literal("weekly"),
+  v.literal("daily")
+);
+
+const paymentMethodTypeValidator = v.union(
+  v.literal("credit_card"),
+  v.literal("debit_card"),
+  v.literal("bank_account"),
+  v.literal("paypal"),
+  v.literal("other")
+);
+
+// Payment method validator (for nested objects)
+const paymentMethodValidator = v.union(
+  v.object({
+    _id: v.id("paymentMethods"),
+    _creationTime: v.number(),
+    userId: v.id("users"),
+    name: v.string(),
+    type: paymentMethodTypeValidator,
+    lastFourDigits: v.optional(v.string()),
+    expiryDate: v.optional(v.string()),
+    isDefault: v.boolean(),
+  }),
+  v.null()
+);
+
+// Subscription with payment method validator
+const subscriptionWithPaymentValidator = v.object({
+  _id: v.id("subscriptions"),
+  _creationTime: v.number(),
+  userId: v.id("users"),
+  name: v.string(),
+  description: v.optional(v.string()),
+  cost: v.number(),
+  currency: v.string(),
+  billingCycle: billingCycleValidator,
+  nextBillingDate: v.number(),
+  paymentMethodId: v.id("paymentMethods"),
+  category: v.string(),
+  website: v.optional(v.string()),
+  isActive: v.boolean(),
+  notes: v.optional(v.string()),
+  paymentMethod: paymentMethodValidator,
+});
+
 async function getLoggedInUser(ctx: any) {
   const userId = await getAuthUserId(ctx);
   if (!userId) {
@@ -12,6 +62,7 @@ async function getLoggedInUser(ctx: any) {
 
 export const list = query({
   args: { activeOnly: v.optional(v.boolean()) },
+  returns: v.array(subscriptionWithPaymentValidator),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
     
@@ -50,18 +101,14 @@ export const create = mutation({
     description: v.optional(v.string()),
     cost: v.number(),
     currency: v.string(),
-    billingCycle: v.union(
-      v.literal("monthly"),
-      v.literal("yearly"),
-      v.literal("weekly"),
-      v.literal("daily")
-    ),
+    billingCycle: billingCycleValidator,
     nextBillingDate: v.number(),
     paymentMethodId: v.id("paymentMethods"),
     category: v.string(),
     website: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id("subscriptions"),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
     
@@ -80,12 +127,7 @@ export const update = mutation({
     description: v.optional(v.string()),
     cost: v.optional(v.number()),
     currency: v.optional(v.string()),
-    billingCycle: v.optional(v.union(
-      v.literal("monthly"),
-      v.literal("yearly"),
-      v.literal("weekly"),
-      v.literal("daily")
-    )),
+    billingCycle: v.optional(billingCycleValidator),
     nextBillingDate: v.optional(v.number()),
     paymentMethodId: v.optional(v.id("paymentMethods")),
     category: v.optional(v.string()),
@@ -93,6 +135,7 @@ export const update = mutation({
     isActive: v.optional(v.boolean()),
     notes: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
     const { id, ...updates } = args;
@@ -102,12 +145,14 @@ export const update = mutation({
       throw new Error("Subscription not found or access denied");
     }
     
-    return await ctx.db.patch(id, updates);
+    await ctx.db.patch(id, updates);
+    return null;
   },
 });
 
 export const remove = mutation({
   args: { id: v.id("subscriptions") },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
     
@@ -116,12 +161,14 @@ export const remove = mutation({
       throw new Error("Subscription not found or access denied");
     }
     
-    return await ctx.db.delete(args.id);
+    await ctx.db.delete(args.id);
+    return null;
   },
 });
 
 export const getUpcoming = query({
   args: { days: v.optional(v.number()) },
+  returns: v.array(subscriptionWithPaymentValidator),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
     const days = args.days || 30;
@@ -151,6 +198,7 @@ export const getUpcoming = query({
 
 export const getTotalCost = query({
   args: {},
+  returns: v.record(v.string(), v.number()),
   handler: async (ctx) => {
     const userId = await getLoggedInUser(ctx);
     
@@ -198,18 +246,14 @@ export const createInternal = internalMutation({
     description: v.optional(v.string()),
     cost: v.number(),
     currency: v.string(),
-    billingCycle: v.union(
-      v.literal("monthly"),
-      v.literal("yearly"),
-      v.literal("weekly"),
-      v.literal("daily")
-    ),
+    billingCycle: billingCycleValidator,
     nextBillingDate: v.number(),
     paymentMethodId: v.id("paymentMethods"),
     category: v.string(),
     website: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
+  returns: v.id("subscriptions"),
   handler: async (ctx, args) => {
     const { userId, ...subscriptionData } = args;
     
@@ -232,12 +276,7 @@ export const updateInternal = internalMutation({
     description: v.optional(v.string()),
     cost: v.optional(v.number()),
     currency: v.optional(v.string()),
-    billingCycle: v.optional(v.union(
-      v.literal("monthly"),
-      v.literal("yearly"),
-      v.literal("weekly"),
-      v.literal("daily")
-    )),
+    billingCycle: v.optional(billingCycleValidator),
     nextBillingDate: v.optional(v.number()),
     paymentMethodId: v.optional(v.id("paymentMethods")),
     category: v.optional(v.string()),
@@ -245,6 +284,7 @@ export const updateInternal = internalMutation({
     isActive: v.optional(v.boolean()),
     notes: v.optional(v.string()),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const { id, userId, ...updates } = args;
     
@@ -253,7 +293,8 @@ export const updateInternal = internalMutation({
       throw new Error("Subscription not found or access denied");
     }
     
-    return await ctx.db.patch(id, updates);
+    await ctx.db.patch(id, updates);
+    return null;
   },
 });
 
@@ -265,6 +306,7 @@ export const listInternal = internalQuery({
     userId: v.id("users"),
     activeOnly: v.optional(v.boolean()),
   },
+  returns: v.array(subscriptionWithPaymentValidator),
   handler: async (ctx, args) => {
     let query = ctx.db
       .query("subscriptions")
@@ -305,13 +347,7 @@ export const migrateFromGuest = mutation({
       v.object({
         localId: v.string(),
         name: v.string(),
-        type: v.union(
-          v.literal("credit_card"),
-          v.literal("debit_card"),
-          v.literal("bank_account"),
-          v.literal("paypal"),
-          v.literal("other")
-        ),
+        type: paymentMethodTypeValidator,
         lastFourDigits: v.optional(v.string()),
         expiryDate: v.optional(v.string()),
         isDefault: v.boolean(),
@@ -324,12 +360,7 @@ export const migrateFromGuest = mutation({
         description: v.optional(v.string()),
         cost: v.number(),
         currency: v.string(),
-        billingCycle: v.union(
-          v.literal("monthly"),
-          v.literal("yearly"),
-          v.literal("weekly"),
-          v.literal("daily")
-        ),
+        billingCycle: billingCycleValidator,
         nextBillingDate: v.number(),
         paymentMethodLocalId: v.string(),
         category: v.string(),
@@ -339,11 +370,16 @@ export const migrateFromGuest = mutation({
       })
     ),
   },
+  returns: v.object({
+    migratedPaymentMethods: v.number(),
+    migratedSubscriptions: v.number(),
+  }),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
     
     // Map local payment method IDs to new Convex IDs
     const localIdToConvexId: Record<string, any> = {};
+    let skippedSubscriptions = 0;
     
     // First, insert all payment methods and build the ID mapping
     for (const pm of args.paymentMethods) {
@@ -362,7 +398,7 @@ export const migrateFromGuest = mutation({
       
       if (!paymentMethodId) {
         // Skip subscriptions with missing payment methods
-        console.warn(`Skipping subscription "${sub.name}" - payment method not found`);
+        skippedSubscriptions++;
         continue;
       }
       
@@ -375,7 +411,7 @@ export const migrateFromGuest = mutation({
     
     return {
       migratedPaymentMethods: args.paymentMethods.length,
-      migratedSubscriptions: args.subscriptions.length,
+      migratedSubscriptions: args.subscriptions.length - skippedSubscriptions,
     };
   },
 });

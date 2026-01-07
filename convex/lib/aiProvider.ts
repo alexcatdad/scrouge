@@ -4,7 +4,7 @@ import { createXai } from "@ai-sdk/xai";
 import { createOllama } from "ollama-ai-provider-v2";
 import type { LanguageModel } from "ai";
 
-export type AIProvider = "openai" | "xai" | "mistral" | "ollama";
+export type AIProvider = "openai" | "xai" | "mistral" | "ollama" | "webllm";
 
 export interface ProviderOptions {
   apiKey?: string;
@@ -53,6 +53,11 @@ export function getModel(
       });
       return ollamaClient(modelId ?? "llama3.2");
     }
+
+    case "webllm":
+      // WebLLM runs client-side, not on the server
+      // This case should never be reached - local inference is handled in the browser
+      throw new Error("WebLLM provider runs client-side. Server-side inference not supported.");
 
     default:
       throw new Error(`Unknown provider: ${provider}`);
