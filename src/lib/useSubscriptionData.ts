@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { type BillingCycle, guestDb } from "./guestDb";
 import { type LocalPaymentMethod, type LocalSubscription, useGuestMode } from "./guestMode";
+import { useMemo } from "react";
 
 // Unified subscription type that works for both guest and authenticated modes
 export interface UnifiedSubscription {
@@ -21,6 +22,28 @@ export interface UnifiedSubscription {
   paymentMethod?: UnifiedPaymentMethod | null;
   // For guest mode mapping
   paymentMethodLocalId?: string;
+  // Family plan fields
+  maxSlots?: number;
+  // Sharing info (for beneficiary view)
+  isSharedWithMe?: boolean;
+  shareId?: string;
+  ownerName?: string;
+  isHidden?: boolean;
+}
+
+// Shared subscription from beneficiary perspective
+export interface SharedSubscription {
+  shareId: string;
+  subscriptionId: string;
+  name: string;
+  cost: number;
+  currency: string;
+  billingCycle: BillingCycle;
+  nextBillingDate: number;
+  maxSlots?: number;
+  ownerName?: string;
+  isHidden: boolean;
+  isActive: boolean;
 }
 
 export interface UnifiedPaymentMethod {
@@ -69,9 +92,12 @@ function toUnifiedPaymentMethod(local: LocalPaymentMethod): UnifiedPaymentMethod
 
 /**
  * Hook to get subscriptions - works for both guest and authenticated users
+ * Includes shared subscriptions for authenticated users
  */
 export function useSubscriptions(options?: {
   activeOnly?: boolean;
+  includeShared?: boolean;
+  includeHiddenShared?: boolean;
 }): UnifiedSubscription[] | undefined {
   const { isGuest } = useGuestMode();
 
@@ -95,35 +121,74 @@ export function useSubscriptions(options?: {
     isGuest ? "skip" : { activeOnly: options?.activeOnly },
   );
 
-  if (isGuest) {
-    if (!guestSubscriptions || !guestPaymentMethods) return undefined;
-    return guestSubscriptions.map((sub) => toUnifiedSubscription(sub, guestPaymentMethods));
-  }
+  // Get shared subscriptions for authenticated users
+  const sharedSubscriptions = useQuery(
+    api.sharing.getSharedWithMe,
+    isGuest || options?.includeShared === false
+      ? "skip"
+      : { includeHidden: options?.includeHiddenShared ?? false },
+  );
 
-  if (!convexSubscriptions) return undefined;
-  return convexSubscriptions.map((sub) => ({
-    _id: sub._id,
-    name: sub.name,
-    description: sub.description,
-    cost: sub.cost,
-    currency: sub.currency,
-    billingCycle: sub.billingCycle,
-    nextBillingDate: sub.nextBillingDate,
-    category: sub.category,
-    website: sub.website,
-    isActive: sub.isActive,
-    notes: sub.notes,
-    paymentMethod: sub.paymentMethod
-      ? {
-          _id: sub.paymentMethod._id,
-          name: sub.paymentMethod.name,
-          type: sub.paymentMethod.type,
-          lastFourDigits: sub.paymentMethod.lastFourDigits,
-          expiryDate: sub.paymentMethod.expiryDate,
-          isDefault: sub.paymentMethod.isDefault,
-        }
-      : null,
-  }));
+  // Merge owned and shared subscriptions
+  return useMemo(() => {
+    if (isGuest) {
+      if (!guestSubscriptions || !guestPaymentMethods) return undefined;
+      return guestSubscriptions.map((sub) => toUnifiedSubscription(sub, guestPaymentMethods));
+    }
+
+    if (!convexSubscriptions) return undefined;
+
+    const ownedSubs: UnifiedSubscription[] = convexSubscriptions.map((sub) => ({
+      _id: sub._id,
+      name: sub.name,
+      description: sub.description,
+      cost: sub.cost,
+      currency: sub.currency,
+      billingCycle: sub.billingCycle,
+      nextBillingDate: sub.nextBillingDate,
+      category: sub.category,
+      website: sub.website,
+      isActive: sub.isActive,
+      notes: sub.notes,
+      maxSlots: sub.maxSlots,
+      paymentMethod: sub.paymentMethod
+        ? {
+            _id: sub.paymentMethod._id,
+            name: sub.paymentMethod.name,
+            type: sub.paymentMethod.type,
+            lastFourDigits: sub.paymentMethod.lastFourDigits,
+            expiryDate: sub.paymentMethod.expiryDate,
+            isDefault: sub.paymentMethod.isDefault,
+          }
+        : null,
+    }));
+
+    // Add shared subscriptions if available
+    if (sharedSubscriptions && options?.includeShared !== false) {
+      const sharedSubs: UnifiedSubscription[] = sharedSubscriptions
+        .filter((s) => !options?.activeOnly || s.isActive)
+        .map((shared) => ({
+          _id: shared.subscriptionId,
+          name: shared.name,
+          cost: shared.cost,
+          currency: shared.currency,
+          billingCycle: shared.billingCycle,
+          nextBillingDate: shared.nextBillingDate,
+          category: "Shared", // Shared subscriptions don't have category for beneficiaries
+          isActive: shared.isActive,
+          maxSlots: shared.maxSlots,
+          // Sharing-specific fields
+          isSharedWithMe: true,
+          shareId: shared.shareId,
+          ownerName: shared.ownerName,
+          isHidden: shared.isHidden,
+        }));
+
+      return [...ownedSubs, ...sharedSubs];
+    }
+
+    return ownedSubs;
+  }, [isGuest, guestSubscriptions, guestPaymentMethods, convexSubscriptions, sharedSubscriptions, options?.activeOnly, options?.includeShared]);
 }
 
 /**
@@ -282,6 +347,7 @@ export function useSubscriptionMutations() {
       category: string;
       website?: string;
       notes?: string;
+      maxSlots?: number;
     }) => {
       if (isGuest) {
         return addSubscription({
@@ -318,6 +384,7 @@ export function useSubscriptionMutations() {
         website?: string;
         isActive?: boolean;
         notes?: string;
+        maxSlots?: number;
       },
     ) => {
       if (isGuest) {
@@ -400,4 +467,94 @@ export function usePaymentMethodMutations() {
       return removeConvex({ id: id as Id<"paymentMethods"> });
     },
   };
+}
+
+/**
+ * Hook for sharing operations
+ */
+export function useSharingMutations() {
+  const addAnonymousShare = useMutation(api.sharing.addAnonymousShare);
+  const createInviteLink = useMutation(api.sharing.createInviteLink);
+  const claimInvite = useMutation(api.sharing.claimInvite);
+  const removeShare = useMutation(api.sharing.removeShare);
+  const toggleHideShare = useMutation(api.sharing.toggleHideShare);
+  const revokeInvite = useMutation(api.sharing.revokeInvite);
+
+  return {
+    addAnonymousShare: async (subscriptionId: string, name: string) => {
+      return addAnonymousShare({
+        subscriptionId: subscriptionId as Id<"subscriptions">,
+        name,
+      });
+    },
+    createInviteLink: async (subscriptionId: string, expiresInDays?: number) => {
+      return createInviteLink({
+        subscriptionId: subscriptionId as Id<"subscriptions">,
+        expiresInDays,
+      });
+    },
+    claimInvite: async (token: string) => {
+      return claimInvite({ token });
+    },
+    removeShare: async (shareId: string) => {
+      return removeShare({ shareId: shareId as Id<"subscriptionShares"> });
+    },
+    toggleHideShare: async (shareId: string) => {
+      return toggleHideShare({ shareId: shareId as Id<"subscriptionShares"> });
+    },
+    revokeInvite: async (inviteId: string) => {
+      return revokeInvite({ inviteId: inviteId as Id<"shareInvites"> });
+    },
+  };
+}
+
+/**
+ * Hook to get shares for a subscription (owner view)
+ */
+export function useSubscriptionShares(subscriptionId: string | undefined) {
+  const { isGuest } = useGuestMode();
+
+  const shares = useQuery(
+    api.sharing.getSubscriptionShares,
+    isGuest || !subscriptionId ? "skip" : { subscriptionId: subscriptionId as Id<"subscriptions"> },
+  );
+
+  return shares;
+}
+
+/**
+ * Hook to get pending invites for a subscription
+ */
+export function usePendingInvites(subscriptionId: string | undefined) {
+  const { isGuest } = useGuestMode();
+
+  const invites = useQuery(
+    api.sharing.getPendingInvites,
+    isGuest || !subscriptionId ? "skip" : { subscriptionId: subscriptionId as Id<"subscriptions"> },
+  );
+
+  return invites;
+}
+
+/**
+ * Hook to get ROI info for a subscription
+ */
+export function useSubscriptionROI(subscriptionId: string | undefined) {
+  const { isGuest } = useGuestMode();
+
+  const roi = useQuery(
+    api.sharing.getSubscriptionROI,
+    isGuest || !subscriptionId ? "skip" : { subscriptionId: subscriptionId as Id<"subscriptions"> },
+  );
+
+  return roi;
+}
+
+/**
+ * Hook to get invite info by token
+ */
+export function useInviteInfo(token: string | undefined) {
+  const info = useQuery(api.sharing.getInviteInfo, token ? { token } : "skip");
+
+  return info;
 }

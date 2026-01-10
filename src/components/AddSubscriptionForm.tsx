@@ -19,6 +19,8 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
     category: "",
     website: "",
     notes: "",
+    isFamilyPlan: false,
+    maxSlots: "",
   });
 
   const { create: createSubscription } = useSubscriptionMutations();
@@ -59,6 +61,7 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
         category: formData.category,
         website: formData.website || undefined,
         notes: formData.notes || undefined,
+        maxSlots: formData.isFamilyPlan && formData.maxSlots ? parseInt(formData.maxSlots) : undefined,
       });
 
       toast.success("Subscription added successfully!");
@@ -73,6 +76,8 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
         category: "",
         website: "",
         notes: "",
+        isFamilyPlan: false,
+        maxSlots: "",
       });
     } catch (error) {
       toast.error("Failed to add subscription");
@@ -232,6 +237,50 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Family Plan Section */}
+        <div className="border-t border-[rgba(113,113,122,0.15)] pt-5 mt-2">
+          <div className="flex items-center gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, isFamilyPlan: !formData.isFamilyPlan, maxSlots: "" })}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                formData.isFamilyPlan ? "bg-primary" : "bg-white/10"
+              }`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                  formData.isFamilyPlan ? "translate-x-5" : ""
+                }`}
+              />
+            </button>
+            <label className="text-sm font-medium text-secondary">
+              Family/Shared Plan
+            </label>
+          </div>
+
+          {formData.isFamilyPlan && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-sm font-medium text-secondary mb-2">
+                  Max Slots <span className="text-accent-coral">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="2"
+                  required={formData.isFamilyPlan}
+                  value={formData.maxSlots}
+                  onChange={(e) => setFormData({ ...formData, maxSlots: e.target.value })}
+                  className="input-field"
+                  placeholder="e.g., 5 for a family plan"
+                />
+                <p className="text-xs text-secondary/60 mt-1">
+                  Total number of people who can use this subscription
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div>
