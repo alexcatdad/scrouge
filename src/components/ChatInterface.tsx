@@ -111,7 +111,6 @@ export function ChatInterface() {
           progressText: "Ready",
         }));
       } catch (error: any) {
-        console.error("Failed to initialize WebLLM:", error);
         setWebllmState((prev) => ({
           ...prev,
           isLoading: false,
@@ -129,9 +128,9 @@ export function ChatInterface() {
     aiSettings?.modelId,
   ]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -281,7 +280,6 @@ export function ChatInterface() {
         await handleRemoteInference(userMessage);
       }
     } catch (error: any) {
-      console.error("Failed to process message:", error);
       await addMessage(`Error: ${error.message}. Please try again.`, "assistant");
     } finally {
       setIsLoading(false);

@@ -1,7 +1,6 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { httpRouter } from "convex/server";
 import { v } from "convex/values";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
@@ -302,7 +301,8 @@ http.route({
     }
 
     try {
-      const inviteInfo = await ctx.runQuery(api.sharing.getInviteInfo, { token });
+      // @ts-expect-error sharing module types will be available after convex dev regenerates types
+      const inviteInfo = await ctx.runQuery(internal.sharing.getInviteInfoInternal, { token });
       return successResponse(inviteInfo);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Internal server error";

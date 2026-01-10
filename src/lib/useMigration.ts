@@ -11,7 +11,7 @@ import { useGuestMode } from "./guestMode";
  * and authenticated state.
  */
 export function useMigration(isAuthenticated: boolean) {
-  const { isGuest, getDataForMigration, exitGuestMode, hasGuestData } = useGuestMode();
+  const { getDataForMigration } = useGuestMode();
   const migrateFromGuest = useMutation(api.subscriptions.migrateFromGuest);
   const [isMigrating, setIsMigrating] = useState(false);
   const migrationAttempted = useRef(false);
@@ -83,8 +83,7 @@ export function useMigration(isAuthenticated: boolean) {
         toast.success(
           `Welcome! Migrated ${result.migratedPaymentMethods} payment methods and ${result.migratedSubscriptions} subscriptions.`,
         );
-      } catch (error) {
-        console.error("Migration failed:", error);
+      } catch (_error) {
         toast.error("Failed to migrate your guest data. Your local data is preserved.");
         // Don't clear local data on failure - user can try again
       } finally {

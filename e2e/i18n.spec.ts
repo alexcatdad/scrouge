@@ -20,7 +20,7 @@ test.describe("Internationalization", () => {
     await expect(page.getByText("Subscriptions")).toBeVisible();
   });
 
-  test("should detect browser language", async ({ page, context }) => {
+  test("should detect browser language", async ({ page }) => {
     // This test verifies the language detection mechanism
     await page.goto("/");
 

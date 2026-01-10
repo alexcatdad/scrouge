@@ -198,7 +198,6 @@ export function parseToolCallArgs(toolCall: ToolCall): Record<string, unknown> {
   try {
     return JSON.parse(toolCall.function.arguments);
   } catch {
-    console.error("Failed to parse tool call arguments:", toolCall.function.arguments);
     return {};
   }
 }

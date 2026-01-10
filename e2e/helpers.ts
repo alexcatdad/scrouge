@@ -615,7 +615,7 @@ export async function mockWebGPUSupport(page: Page, supported: boolean) {
     // Delete existing gpu property if it exists
     if ("gpu" in navigator) {
       try {
-        delete (navigator as any).gpu;
+        (navigator as any).gpu = undefined;
       } catch {
         // Ignore if can't delete
       }

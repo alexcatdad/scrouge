@@ -17,7 +17,7 @@ interface ShareManagementProps {
 export function ShareManagement({
   subscriptionId,
   subscriptionName,
-  maxSlots,
+  maxSlots: _maxSlots,
   onClose,
 }: ShareManagementProps) {
   const [newMemberName, setNewMemberName] = useState("");
@@ -37,9 +37,8 @@ export function ShareManagement({
       await addAnonymousShare(subscriptionId, newMemberName.trim());
       toast.success(`Added ${newMemberName} to the plan`);
       setNewMemberName("");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to add member");
-      console.error(error);
     }
   };
 
@@ -52,9 +51,8 @@ export function ShareManagement({
       toast.success("Invite link copied to clipboard!");
       setCopiedToken(result.token);
       setTimeout(() => setCopiedToken(null), 3000);
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to create invite link");
-      console.error(error);
     } finally {
       setIsCreatingInvite(false);
     }
@@ -65,9 +63,8 @@ export function ShareManagement({
       try {
         await removeShare(shareId);
         toast.success("Member removed");
-      } catch (error) {
+      } catch (_error) {
         toast.error("Failed to remove member");
-        console.error(error);
       }
     }
   };
@@ -76,9 +73,8 @@ export function ShareManagement({
     try {
       await revokeInvite(inviteId);
       toast.success("Invite revoked");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to revoke invite");
-      console.error(error);
     }
   };
 
@@ -122,7 +118,7 @@ export function ShareManagement({
 
         <div className="p-6 space-y-6">
           {/* ROI Section */}
-          {roi && roi.hasSlots && (
+          {roi?.hasSlots && (
             <div className="p-4 rounded-xl bg-white/5 border border-[rgba(113,113,122,0.15)]">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-medium text-secondary">Plan Usage</span>
