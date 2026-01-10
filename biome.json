@@ -7,16 +7,16 @@
     "defaultBranch": "main"
   },
   "files": {
-    "includes": ["**"],
-    "ignore": [
-      "**/dist/**",
-      "**/convex/_generated/**",
-      "**/node_modules/**",
-      "**/playwright-report/**",
-      "**/test-results/**",
-      "**/*.css",
-      "**/coverage/**",
-      "**/.changeset/**"
+    "includes": [
+      "**",
+      "!**/dist/**",
+      "!**/convex/_generated/**",
+      "!**/node_modules/**",
+      "!**/playwright-report/**",
+      "!**/test-results/**",
+      "!**/*.css",
+      "!**/coverage/**",
+      "!**/.changeset/**"
     ]
   },
   "formatter": {
@@ -38,7 +38,6 @@
         "useExhaustiveDependencies": "warn",
         "noUndeclaredVariables": "error",
         "noConstAssign": "error",
-        "noNewSymbol": "error",
         "noSelfAssign": "error",
         "noUnreachable": "error",
         "noUnreachableSuper": "error",
@@ -65,7 +64,6 @@
         "useConst": "error",
         "useShorthandFunctionType": "warn",
         "useSingleVarDeclarator": "warn",
-        "noVar": "error",
         "useExponentiationOperator": "warn",
         "useNodejsImportProtocol": "warn",
         "useNumberNamespace": "warn"
@@ -90,15 +88,11 @@
         "noLabelWithoutControl": "warn",
         "useAltText": "error",
         "useValidAriaRole": "error",
-        "noBlankTarget": "error",
         "useKeyWithClickEvents": "warn"
       },
       "performance": {
         "noAccumulatingSpread": "warn",
         "noDelete": "warn"
-      },
-      "nursery": {
-        "noConsoleLog": "warn"
       }
     }
   },
@@ -129,41 +123,32 @@
   },
   "overrides": [
     {
-      "include": ["tests/**", "e2e/**", "*.test.ts", "*.test.tsx", "*.spec.ts"],
+      "includes": ["tests/**", "e2e/**", "*.test.ts", "*.test.tsx", "*.spec.ts"],
       "linter": {
         "rules": {
           "suspicious": {
             "noExplicitAny": "off",
             "noConsole": "off"
-          },
-          "nursery": {
-            "noConsoleLog": "off"
           }
         }
       }
     },
     {
-      "include": ["convex/**"],
+      "includes": ["convex/**"],
       "linter": {
         "rules": {
           "suspicious": {
             "noConsole": "off"
-          },
-          "nursery": {
-            "noConsoleLog": "off"
           }
         }
       }
     },
     {
-      "include": ["index.ts"],
+      "includes": ["index.ts"],
       "linter": {
         "rules": {
           "suspicious": {
             "noConsole": "off"
-          },
-          "nursery": {
-            "noConsoleLog": "off"
           }
         }
       }
