@@ -1,6 +1,6 @@
 /**
  * Bun Production Server
- * 
+ *
  * Serves the Vite-built static files in production.
  * In development, use `bun run dev` which runs Vite dev server.
  */
@@ -106,11 +106,11 @@ const getSecurityHeaders = (): Record<string, string> => {
 const addSecurityHeaders = (response: Response): Response => {
   const securityHeaders = getSecurityHeaders();
   const newHeaders = new Headers(response.headers);
-  
+
   for (const [key, value] of Object.entries(securityHeaders)) {
     newHeaders.set(key, value);
   }
-  
+
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -171,7 +171,7 @@ Bun.serve({
 
     // Serve from dist directory (Vite build output)
     const distDir = "./dist";
-    
+
     // Handle root path -> index.html
     if (pathname === "/") {
       pathname = "/index.html";
@@ -180,11 +180,11 @@ Bun.serve({
     // Try to serve the file from dist
     const filePath = `${distDir}${pathname}`;
     const file = Bun.file(filePath);
-    
+
     if (await file.exists()) {
       const contentType = getContentType(pathname);
       const cacheControl = getCacheControl(pathname);
-      
+
       const response = new Response(file, {
         headers: {
           "Content-Type": contentType,

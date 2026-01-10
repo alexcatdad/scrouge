@@ -1,21 +1,9 @@
 /**
  * Error Monitoring Utility
- * 
- * Provides a unified interface for error monitoring and reporting.
- * Can be configured to use Sentry or other monitoring services.
- * 
- * To enable Sentry:
- * 1. Install: bun add @sentry/react
- * 2. Set VITE_SENTRY_DSN environment variable in .env
- * 3. Call initMonitoring() in main.tsx
+ *
+ * Provides a unified interface for error logging.
+ * Currently logs to console only.
  */
-
-export interface MonitoringConfig {
-  dsn?: string;
-  environment?: string;
-  release?: string;
-  debug?: boolean;
-}
 
 export interface ErrorContext {
   userId?: string;
@@ -24,181 +12,60 @@ export interface ErrorContext {
   extra?: Record<string, unknown>;
 }
 
-// Global state for monitoring
-let isInitialized = false;
-let sentryInstance: typeof import("@sentry/react") | null = null;
-
 /**
  * Check if we're in production mode using Vite's import.meta.env
  */
-const isProduction = import.meta.env.PROD;
+const _isProduction = import.meta.env.PROD;
 
 /**
- * Initialize error monitoring
- * Call this in main.tsx before rendering the app
+ * Initialize error monitoring (no-op, kept for API compatibility)
  */
-export async function initMonitoring(config?: MonitoringConfig): Promise<void> {
-  if (isInitialized) return;
-
-  const dsn = config?.dsn;
-  
-  if (!dsn) {
-    console.info("[Monitoring] No DSN configured, error monitoring disabled");
-    isInitialized = true;
-    return;
-  }
-
-  try {
-    // Dynamically import Sentry to avoid bundling if not used
-    const Sentry = await import("@sentry/react");
-    
-    Sentry.init({
-      dsn,
-      environment: config?.environment || import.meta.env.MODE,
-      release: config?.release,
-      debug: config?.debug ?? !isProduction,
-      
-      // Performance monitoring
-      tracesSampleRate: isProduction ? 0.1 : 1.0,
-      
-      // Session replay (optional)
-      replaysSessionSampleRate: 0.1,
-      replaysOnErrorSampleRate: 1.0,
-      
-      // Filter out non-critical errors
-      beforeSend(event) {
-        // Don't send errors from development
-        if (!isProduction) {
-          return null;
-        }
-        return event;
-      },
-    });
-
-    sentryInstance = Sentry;
-    isInitialized = true;
-    console.info("[Monitoring] Sentry initialized successfully");
-  } catch (error) {
-    // Sentry not installed or failed to initialize
-    console.warn("[Monitoring] Failed to initialize Sentry:", error);
-    isInitialized = true;
-  }
+export async function initMonitoring(): Promise<void> {
+  // No-op: monitoring is now console-only
 }
 
 /**
- * Report an error to the monitoring service
+ * Report an error to the console
  */
 export function captureError(error: Error, context?: ErrorContext): void {
-  // Always log to console in development
-  if (!isProduction) {
-    console.error("[Error]", error, context);
-  }
-
-  if (!sentryInstance) return;
-
-  sentryInstance.withScope((scope) => {
-    if (context?.userId) {
-      scope.setUser({ id: context.userId });
-    }
-    
-    if (context?.operation) {
-      scope.setTag("operation", context.operation);
-    }
-    
-    if (context?.tags) {
-      Object.entries(context.tags).forEach(([key, value]) => {
-        scope.setTag(key, value);
-      });
-    }
-    
-    if (context?.extra) {
-      Object.entries(context.extra).forEach(([key, value]) => {
-        scope.setExtra(key, value);
-      });
-    }
-
-    sentryInstance!.captureException(error);
-  });
+  // Always log to console
+  console.error("[Error]", error, context);
 }
 
 /**
- * Report a message to the monitoring service
+ * Report a message to the console
  */
 export function captureMessage(
   message: string,
   level: "info" | "warning" | "error" = "info",
-  context?: ErrorContext
+  context?: ErrorContext,
 ): void {
-  if (!sentryInstance) {
-    console.log(`[${level.toUpperCase()}]`, message, context);
-    return;
-  }
-
-  sentryInstance.withScope((scope) => {
-    if (context?.userId) {
-      scope.setUser({ id: context.userId });
-    }
-    
-    if (context?.tags) {
-      Object.entries(context.tags).forEach(([key, value]) => {
-        scope.setTag(key, value);
-      });
-    }
-
-    sentryInstance!.captureMessage(message, level);
-  });
+  console.log(`[${level.toUpperCase()}]`, message, context);
 }
 
 /**
- * Set user context for error tracking
+ * Set user context for error tracking (no-op, kept for API compatibility)
  */
-export function setUser(userId: string | null, email?: string): void {
-  if (!sentryInstance) return;
-
-  if (userId) {
-    sentryInstance.setUser({ id: userId, email });
-  } else {
-    sentryInstance.setUser(null);
-  }
+export function setUser(_userId: string | null, _email?: string): void {
+  // No-op: console-only logging
 }
 
 /**
- * Add breadcrumb for debugging
+ * Add breadcrumb for debugging (no-op, kept for API compatibility)
  */
 export function addBreadcrumb(
-  message: string,
-  category: string,
-  data?: Record<string, unknown>
+  _message: string,
+  _category: string,
+  _data?: Record<string, unknown>,
 ): void {
-  if (!sentryInstance) return;
-
-  sentryInstance.addBreadcrumb({
-    message,
-    category,
-    data,
-    level: "info",
-  });
+  // No-op: console-only logging
 }
 
 /**
- * Start a performance transaction
+ * Start a performance transaction (no-op, kept for API compatibility)
  */
-export function startTransaction(
-  name: string,
-  operation: string
-): { finish: () => void } {
-  if (!sentryInstance) {
-    return { finish: () => {} };
-  }
-
-  const transaction = sentryInstance.startTransaction({
-    name,
-    op: operation,
-  });
-
-  return {
-    finish: () => transaction.finish(),
-  };
+export function startTransaction(_name: string, _operation: string): { finish: () => void } {
+  return { finish: () => {} };
 }
 
 /**

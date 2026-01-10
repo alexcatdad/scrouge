@@ -1,6 +1,5 @@
 import { v } from "convex/values";
-import type { MutationCtx, QueryCtx } from "../_generated/server";
-import type { Id } from "../_generated/dataModel";
+import type { MutationCtx } from "../_generated/server";
 
 /**
  * Rate limiting configuration
@@ -29,34 +28,31 @@ export const RATE_LIMITS = {
 /**
  * Rate limit key generator
  */
-export function getRateLimitKey(
-  operation: keyof typeof RATE_LIMITS,
-  identifier: string
-): string {
+export function getRateLimitKey(operation: keyof typeof RATE_LIMITS, identifier: string): string {
   return `${operation}:${identifier}`;
 }
 
 /**
  * Check if a request should be rate limited
  * Uses a simple sliding window counter approach
- * 
+ *
  * This is a lightweight implementation that doesn't require a separate table.
  * For production, consider using a dedicated rate limiting service.
  */
 export async function checkRateLimit(
   ctx: MutationCtx,
   key: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
 ): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
   const now = Date.now();
   const windowStart = now - config.windowMs;
-  
+
   // Get existing rate limit record
   const existing = await ctx.db
     .query("rateLimits")
     .withIndex("by_key", (q) => q.eq("key", key))
     .first();
-  
+
   if (!existing) {
     // First request - create new record
     await ctx.db.insert("rateLimits", {
@@ -65,14 +61,14 @@ export async function checkRateLimit(
       windowStart: now,
       lastRequest: now,
     });
-    
+
     return {
       allowed: true,
       remaining: config.maxRequests - 1,
       resetAt: now + config.windowMs,
     };
   }
-  
+
   // Check if we're in a new window
   if (existing.windowStart < windowStart) {
     // Reset the window
@@ -81,14 +77,14 @@ export async function checkRateLimit(
       windowStart: now,
       lastRequest: now,
     });
-    
+
     return {
       allowed: true,
       remaining: config.maxRequests - 1,
       resetAt: now + config.windowMs,
     };
   }
-  
+
   // Within the same window - check count
   if (existing.count >= config.maxRequests) {
     return {
@@ -97,13 +93,13 @@ export async function checkRateLimit(
       resetAt: existing.windowStart + config.windowMs,
     };
   }
-  
+
   // Increment counter
   await ctx.db.patch(existing._id, {
     count: existing.count + 1,
     lastRequest: now,
   });
-  
+
   return {
     allowed: true,
     remaining: config.maxRequests - existing.count - 1,
@@ -117,7 +113,7 @@ export async function checkRateLimit(
 export class RateLimitError extends Error {
   public readonly resetAt: number;
   public readonly remaining: number;
-  
+
   constructor(resetAt: number, remaining: number) {
     const retryAfter = Math.ceil((resetAt - Date.now()) / 1000);
     super(`Rate limit exceeded. Try again in ${retryAfter} seconds.`);
@@ -133,12 +129,12 @@ export class RateLimitError extends Error {
 export async function enforceRateLimit(
   ctx: MutationCtx,
   operation: keyof typeof RATE_LIMITS,
-  identifier: string
+  identifier: string,
 ): Promise<void> {
   const key = getRateLimitKey(operation, identifier);
   const config = RATE_LIMITS[operation];
   const result = await checkRateLimit(ctx, key, config);
-  
+
   if (!result.allowed) {
     throw new RateLimitError(result.resetAt, result.remaining);
   }
@@ -153,4 +149,3 @@ export const rateLimitValidator = v.object({
   windowStart: v.number(),
   lastRequest: v.number(),
 });
-

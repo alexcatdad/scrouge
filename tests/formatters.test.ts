@@ -1,5 +1,11 @@
-import { describe, test, expect } from "bun:test";
-import { formatCurrency, formatDate, formatNumber, formatRelativeDate, formatPercent } from "../src/lib/i18n/formatters";
+import { describe, expect, test } from "bun:test";
+import {
+  formatCurrency,
+  formatDate,
+  formatNumber,
+  formatPercent,
+  formatRelativeDate,
+} from "../src/lib/i18n/formatters";
 
 describe("formatCurrency", () => {
   test("formats USD correctly in English", () => {
@@ -155,4 +161,3 @@ describe("formatPercent", () => {
     expect(result).toContain("150");
   });
 });
-

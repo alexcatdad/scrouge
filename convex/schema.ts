@@ -1,6 +1,6 @@
+import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { authTables } from "@convex-dev/auth/server";
 
 const applicationTables = {
   subscriptions: defineTable({
@@ -13,7 +13,7 @@ const applicationTables = {
       v.literal("monthly"),
       v.literal("yearly"),
       v.literal("weekly"),
-      v.literal("daily")
+      v.literal("daily"),
     ),
     nextBillingDate: v.number(),
     paymentMethodId: v.id("paymentMethods"),
@@ -34,7 +34,7 @@ const applicationTables = {
       v.literal("debit_card"),
       v.literal("bank_account"),
       v.literal("paypal"),
-      v.literal("other")
+      v.literal("other"),
     ),
     lastFourDigits: v.optional(v.string()),
     expiryDate: v.optional(v.string()),
@@ -44,13 +44,15 @@ const applicationTables = {
   servicePricing: defineTable({
     serviceName: v.string(),
     website: v.string(),
-    plans: v.array(v.object({
-      name: v.string(),
-      price: v.number(),
-      currency: v.string(),
-      billingCycle: v.string(),
-      features: v.array(v.string()),
-    })),
+    plans: v.array(
+      v.object({
+        name: v.string(),
+        price: v.number(),
+        currency: v.string(),
+        billingCycle: v.string(),
+        features: v.array(v.string()),
+      }),
+    ),
     lastUpdated: v.number(),
   })
     .index("by_service", ["serviceName"])
@@ -63,7 +65,7 @@ const applicationTables = {
       v.literal("xai"),
       v.literal("mistral"),
       v.literal("ollama"),
-      v.literal("webllm")
+      v.literal("webllm"),
     ),
     encryptedApiKey: v.string(),
     modelId: v.optional(v.string()),

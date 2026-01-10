@@ -221,4 +221,3 @@ type FlattenKeys<T, Prefix extends string = ""> = T extends object
         : never;
     }[keyof T]
   : never;
-

@@ -1,8 +1,8 @@
 import {
+  type ChatCompletionMessageParam,
   CreateMLCEngine,
-  MLCEngine,
-  InitProgressReport,
-  ChatCompletionMessageParam,
+  type InitProgressReport,
+  type MLCEngine,
 } from "@mlc-ai/web-llm";
 
 // Available models optimized for tool calling
@@ -74,6 +74,28 @@ export interface ChatMessage {
 let engineInstance: MLCEngine | null = null;
 let currentModelId: WebLLMModelId | null = null;
 
+// Test mode support - allows injecting a mock engine for E2E testing
+let mockEngineInstance: MLCEngine | null = null;
+
+/**
+ * Inject a mock engine for testing purposes.
+ * When set, this engine will be used instead of the real WebLLM engine.
+ */
+export function setMockEngine(engine: MLCEngine | null): void {
+  mockEngineInstance = engine;
+  if (engine) {
+    engineInstance = engine;
+    currentModelId = "mock-model" as WebLLMModelId;
+  }
+}
+
+/**
+ * Check if running in mock/test mode
+ */
+export function isMockMode(): boolean {
+  return mockEngineInstance !== null;
+}
+
 /**
  * Check if WebGPU is supported in the current browser
  */
@@ -115,8 +137,18 @@ export function getCurrentModel(): WebLLMModelId | null {
  */
 export async function initWebLLM(
   modelId: WebLLMModelId = DEFAULT_MODEL,
-  onProgress?: (report: InitProgressReport) => void
+  onProgress?: (report: InitProgressReport) => void,
 ): Promise<MLCEngine> {
+  // If in mock mode, return the mock engine immediately
+  if (mockEngineInstance) {
+    // Simulate progress for testing
+    if (onProgress) {
+      onProgress({ progress: 0.5, text: "Loading mock model..." });
+      onProgress({ progress: 1, text: "Mock model ready" });
+    }
+    return mockEngineInstance;
+  }
+
   // If same model is already loaded, return existing engine
   if (engineInstance && currentModelId === modelId) {
     return engineInstance;
@@ -157,7 +189,7 @@ export async function chatWithTools(
   options: {
     temperature?: number;
     maxTokens?: number;
-  } = {}
+  } = {},
 ): Promise<{
   content: string | null;
   toolCalls: ToolCall[] | null;
@@ -168,21 +200,43 @@ export async function chatWithTools(
 
   const { temperature = 0.7, maxTokens = 1024 } = options;
 
-  const response = await engineInstance.chat.completions.create({
-    messages: messages as ChatCompletionMessageParam[],
-    tools: tools.length > 0 ? tools : undefined,
-    tool_choice: tools.length > 0 ? "auto" : undefined,
-    temperature,
-    max_tokens: maxTokens,
-  });
+  try {
+    const response = await engineInstance.chat.completions.create({
+      messages: messages as ChatCompletionMessageParam[],
+      tools: tools.length > 0 ? tools : undefined,
+      tool_choice: tools.length > 0 ? "auto" : undefined,
+      temperature,
+      max_tokens: maxTokens,
+    });
 
-  const choice = response.choices[0];
-  const message = choice.message;
+    const choice = response.choices[0];
+    const message = choice.message;
 
-  return {
-    content: message.content,
-    toolCalls: message.tool_calls as ToolCall[] | undefined ?? null,
-  };
+    return {
+      content: message.content,
+      toolCalls: (message.tool_calls as ToolCall[] | undefined) ?? null,
+    };
+  } catch (error: unknown) {
+    // Handle WebLLM function calling parse errors
+    // When the model returns plain text instead of a tool call, WebLLM throws
+    // an error with the text content embedded in the message
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (errorMessage.includes("parsing outputMessage for function calling")) {
+      // Extract the plain text response from the error message
+      const match = errorMessage.match(/Got outputMessage: ([\s\S]*?)(?:Got error:|$)/);
+      if (match?.[1]) {
+        const extractedContent = match[1].trim();
+        return {
+          content: extractedContent,
+          toolCalls: null,
+        };
+      }
+    }
+
+    // Re-throw other errors
+    throw error;
+  }
 }
 
 /**
@@ -193,7 +247,7 @@ export async function* streamChat(
   options: {
     temperature?: number;
     maxTokens?: number;
-  } = {}
+  } = {},
 ): AsyncGenerator<string, void, unknown> {
   if (!engineInstance) {
     throw new Error("WebLLM engine not initialized. Call initWebLLM first.");
@@ -231,4 +285,3 @@ export async function resetChat(): Promise<void> {
 export function getModelInfo(modelId: WebLLMModelId) {
   return WEBLLM_MODELS.find((m) => m.id === modelId);
 }
-

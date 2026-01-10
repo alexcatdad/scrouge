@@ -1,9 +1,9 @@
-import { convexAuth, getAuthUserId } from "@convex-dev/auth/server";
-import { Password } from "@convex-dev/auth/providers/Password";
-import GitHub from "@auth/core/providers/github";
 import Authentik from "@auth/core/providers/authentik";
-import { query } from "./_generated/server";
+import GitHub from "@auth/core/providers/github";
+import { Password } from "@convex-dev/auth/providers/Password";
+import { convexAuth, getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import { query } from "./_generated/server";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
@@ -31,7 +31,7 @@ export const loggedInUser = query({
       phoneVerificationTime: v.optional(v.number()),
       isAnonymous: v.optional(v.boolean()),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);

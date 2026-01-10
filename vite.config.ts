@@ -1,25 +1,15 @@
-import { defineConfig } from "vite";
+import path from "node:path";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path from "path";
+import { defineConfig } from "vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   build: {
     outDir: "dist",
     // Generate source maps for production debugging
     sourcemap: true,
-    rollupOptions: {
-      // Mark @sentry/react as external since it's dynamically imported and optional
-      // Users who want Sentry should install it: bun add @sentry/react
-      external: ["@sentry/react"],
-      output: {
-        // Provide globals for external modules (needed for UMD builds)
-        globals: {
-          "@sentry/react": "Sentry",
-        },
-      },
-    },
   },
   resolve: {
     alias: {
@@ -29,8 +19,6 @@ export default defineConfig({
   // Optimize dependencies
   optimizeDeps: {
     include: ["react", "react-dom", "convex/react"],
-    // Exclude optional dependencies that may not be installed
-    exclude: ["@sentry/react"],
   },
   // Server configuration for development
   server: {

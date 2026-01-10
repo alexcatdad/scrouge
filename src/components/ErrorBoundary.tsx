@@ -27,12 +27,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({ errorInfo });
-    
+
     // Log error to console in development
     if (process.env.NODE_ENV !== "production") {
       console.error("ErrorBoundary caught an error:", error, errorInfo);
     }
-    
+
     // Send to error monitoring service
     reportBoundaryError(error, errorInfo.componentStack || "");
   }
@@ -67,15 +67,15 @@ export class ErrorBoundary extends Component<Props, State> {
                 />
               </svg>
             </div>
-            
+
             <h2 className="font-display text-2xl font-semibold text-white mb-3">
               Something went wrong
             </h2>
-            
+
             <p className="text-secondary mb-6">
               We encountered an unexpected error. Please try again or refresh the page.
             </p>
-            
+
             {process.env.NODE_ENV !== "production" && this.state.error && (
               <div className="mb-6 p-4 rounded-lg bg-red-500/5 border border-red-500/20 text-left">
                 <p className="text-red-400 text-sm font-mono break-all">
@@ -88,7 +88,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 )}
               </div>
             )}
-            
+
             <div className="flex gap-3 justify-center">
               <button
                 onClick={this.handleRetry}
@@ -157,7 +157,7 @@ export class ErrorBoundaryWithFallback extends Component<
   render(): ReactNode {
     if (this.state.hasError && this.state.error) {
       const { FallbackComponent } = this.props;
-      
+
       if (FallbackComponent) {
         return (
           <FallbackComponent
@@ -171,11 +171,8 @@ export class ErrorBoundaryWithFallback extends Component<
       return (
         <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
           <p className="text-red-400 text-sm">
-            Something went wrong. 
-            <button 
-              onClick={this.resetErrorBoundary}
-              className="ml-2 underline hover:no-underline"
-            >
+            Something went wrong.
+            <button onClick={this.resetErrorBoundary} className="ml-2 underline hover:no-underline">
               Try again
             </button>
           </p>
@@ -186,4 +183,3 @@ export class ErrorBoundaryWithFallback extends Component<
     return this.props.children;
   }
 }
-

@@ -1,8 +1,8 @@
-import { createOpenAI } from "@ai-sdk/openai";
 import { createMistral } from "@ai-sdk/mistral";
+import { createOpenAI } from "@ai-sdk/openai";
 import { createXai } from "@ai-sdk/xai";
-import { createOllama } from "ollama-ai-provider-v2";
 import type { LanguageModel } from "ai";
+import { createOllama } from "ollama-ai-provider-v2";
 
 export type AIProvider = "openai" | "xai" | "mistral" | "ollama" | "webllm";
 
@@ -15,10 +15,7 @@ export interface ProviderOptions {
 /**
  * Get the appropriate AI model based on provider and configuration
  */
-export function getModel(
-  provider: AIProvider,
-  options: ProviderOptions = {}
-): LanguageModel {
+export function getModel(provider: AIProvider, options: ProviderOptions = {}): LanguageModel {
   const { apiKey, baseURL, modelId } = options;
 
   switch (provider) {
@@ -63,4 +60,3 @@ export function getModel(
       throw new Error(`Unknown provider: ${provider}`);
   }
 }
-

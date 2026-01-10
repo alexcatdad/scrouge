@@ -1,6 +1,6 @@
-import { query, mutation, internalQuery } from "./_generated/server";
-import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { v } from "convex/values";
+import { internalQuery, mutation, query } from "./_generated/server";
 
 // Shared validator for payment method type
 const paymentMethodTypeValidator = v.union(
@@ -8,7 +8,7 @@ const paymentMethodTypeValidator = v.union(
   v.literal("debit_card"),
   v.literal("bank_account"),
   v.literal("paypal"),
-  v.literal("other")
+  v.literal("other"),
 );
 
 // Shared validator for payment method document
@@ -36,7 +36,7 @@ export const list = query({
   returns: v.array(paymentMethodValidator),
   handler: async (ctx) => {
     const userId = await getLoggedInUser(ctx);
-    
+
     return await ctx.db
       .query("paymentMethods")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -55,21 +55,21 @@ export const create = mutation({
   returns: v.id("paymentMethods"),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
-    
+
     // If this is set as default, unset other defaults
     if (args.isDefault) {
       const existingMethods = await ctx.db
         .query("paymentMethods")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect();
-      
+
       for (const method of existingMethods) {
         if (method.isDefault) {
           await ctx.db.patch(method._id, { isDefault: false });
         }
       }
     }
-    
+
     return await ctx.db.insert("paymentMethods", {
       userId,
       ...args,
@@ -91,26 +91,26 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
     const { id, ...updates } = args;
-    
+
     const paymentMethod = await ctx.db.get(id);
     if (!paymentMethod || paymentMethod.userId !== userId) {
       throw new Error("Payment method not found or access denied");
     }
-    
+
     // If this is set as default, unset other defaults
     if (updates.isDefault) {
       const existingMethods = await ctx.db
         .query("paymentMethods")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect();
-      
+
       for (const method of existingMethods) {
         if (method.isDefault && method._id !== id) {
           await ctx.db.patch(method._id, { isDefault: false });
         }
       }
     }
-    
+
     await ctx.db.patch(id, updates);
     return null;
   },
@@ -121,23 +121,23 @@ export const remove = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
-    
+
     const paymentMethod = await ctx.db.get(args.id);
     if (!paymentMethod || paymentMethod.userId !== userId) {
       throw new Error("Payment method not found or access denied");
     }
-    
+
     // Check if any subscriptions use this payment method
     const subscriptions = await ctx.db
       .query("subscriptions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .filter((q) => q.eq(q.field("paymentMethodId"), args.id))
       .collect();
-    
+
     if (subscriptions.length > 0) {
       throw new Error("Cannot delete payment method that is being used by subscriptions");
     }
-    
+
     await ctx.db.delete(args.id);
     return null;
   },

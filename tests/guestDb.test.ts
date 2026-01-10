@@ -1,28 +1,28 @@
-import { describe, test, expect, beforeEach } from "bun:test";
-import { generateLocalId, type BillingCycle, type PaymentMethodType } from "../src/lib/guestDb";
+import { describe, expect, test } from "bun:test";
+import { type BillingCycle, generateLocalId, type PaymentMethodType } from "../src/lib/guestDb";
 
 describe("generateLocalId", () => {
   test("returns a valid UUID string", () => {
     const id = generateLocalId();
-    
+
     expect(typeof id).toBe("string");
     expect(id.length).toBe(36); // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   });
 
   test("generates unique IDs", () => {
     const ids = new Set<string>();
-    
+
     for (let i = 0; i < 1000; i++) {
       ids.add(generateLocalId());
     }
-    
+
     expect(ids.size).toBe(1000);
   });
 
   test("matches UUID format", () => {
     const id = generateLocalId();
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    
+
     expect(uuidRegex.test(id)).toBe(true);
   });
 });
@@ -30,8 +30,8 @@ describe("generateLocalId", () => {
 describe("BillingCycle type", () => {
   test("accepts valid billing cycles", () => {
     const validCycles: BillingCycle[] = ["monthly", "yearly", "weekly", "daily"];
-    
-    validCycles.forEach(cycle => {
+
+    validCycles.forEach((cycle) => {
       expect(cycle).toBeTruthy();
     });
   });
@@ -46,8 +46,8 @@ describe("PaymentMethodType type", () => {
       "paypal",
       "other",
     ];
-    
-    validTypes.forEach(type => {
+
+    validTypes.forEach((type) => {
       expect(type).toBeTruthy();
     });
   });
@@ -65,7 +65,7 @@ describe("LocalPaymentMethod interface", () => {
       isDefault: true,
       createdAt: Date.now(),
     };
-    
+
     expect(paymentMethod.name).toBe("My Visa Card");
     expect(paymentMethod.type).toBe("credit_card");
     expect(paymentMethod.isDefault).toBe(true);
@@ -79,7 +79,7 @@ describe("LocalPaymentMethod interface", () => {
       isDefault: false,
       createdAt: Date.now(),
     };
-    
+
     expect(paymentMethod.lastFourDigits).toBeUndefined();
     expect(paymentMethod.expiryDate).toBeUndefined();
     expect(paymentMethod.id).toBeUndefined();
@@ -104,7 +104,7 @@ describe("LocalSubscription interface", () => {
       notes: "Family plan",
       createdAt: Date.now(),
     };
-    
+
     expect(subscription.name).toBe("Netflix");
     expect(subscription.cost).toBe(15.99);
     expect(subscription.billingCycle).toBe("monthly");
@@ -124,7 +124,7 @@ describe("LocalSubscription interface", () => {
       isActive: true,
       createdAt: Date.now(),
     };
-    
+
     expect(subscription.description).toBeUndefined();
     expect(subscription.website).toBeUndefined();
     expect(subscription.notes).toBeUndefined();
@@ -138,9 +138,8 @@ describe("GuestDB (structure validation)", () => {
     // This test validates the expected database name
     // Full integration testing is done in E2E tests
     const { GuestDB } = await import("../src/lib/guestDb");
-    
+
     // Just verify the class can be imported
     expect(GuestDB).toBeDefined();
   });
 });
-

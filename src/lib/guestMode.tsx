@@ -1,17 +1,10 @@
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  type ReactNode,
-} from "react";
-import {
-  guestDb,
-  generateLocalId,
-  type LocalSubscription,
-  type LocalPaymentMethod,
   type BillingCycle,
+  generateLocalId,
+  guestDb,
+  type LocalPaymentMethod,
+  type LocalSubscription,
   type PaymentMethodType,
 } from "./guestDb";
 
@@ -23,20 +16,20 @@ interface GuestModeContextValue {
   exitGuestMode: () => Promise<void>;
   // Payment method operations
   addPaymentMethod: (
-    data: Omit<LocalPaymentMethod, "id" | "localId" | "createdAt">
+    data: Omit<LocalPaymentMethod, "id" | "localId" | "createdAt">,
   ) => Promise<string>;
   updatePaymentMethod: (
     localId: string,
-    data: Partial<Omit<LocalPaymentMethod, "id" | "localId" | "createdAt">>
+    data: Partial<Omit<LocalPaymentMethod, "id" | "localId" | "createdAt">>,
   ) => Promise<void>;
   deletePaymentMethod: (localId: string) => Promise<void>;
   // Subscription operations
   addSubscription: (
-    data: Omit<LocalSubscription, "id" | "localId" | "createdAt">
+    data: Omit<LocalSubscription, "id" | "localId" | "createdAt">,
   ) => Promise<string>;
   updateSubscription: (
     localId: string,
-    data: Partial<Omit<LocalSubscription, "id" | "localId" | "createdAt">>
+    data: Partial<Omit<LocalSubscription, "id" | "localId" | "createdAt">>,
   ) => Promise<void>;
   deleteSubscription: (localId: string) => Promise<void>;
   // Migration helpers
@@ -78,17 +71,12 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
 
   // Payment method operations
   const addPaymentMethod = useCallback(
-    async (
-      data: Omit<LocalPaymentMethod, "id" | "localId" | "createdAt">
-    ): Promise<string> => {
+    async (data: Omit<LocalPaymentMethod, "id" | "localId" | "createdAt">): Promise<string> => {
       const localId = generateLocalId();
 
       // If this is set as default, unset other defaults first
       if (data.isDefault) {
-        await guestDb.paymentMethods
-          .where("isDefault")
-          .equals(1)
-          .modify({ isDefault: false });
+        await guestDb.paymentMethods.where("isDefault").equals(1).modify({ isDefault: false });
       }
 
       await guestDb.paymentMethods.add({
@@ -98,39 +86,31 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
       });
       return localId;
     },
-    []
+    [],
   );
 
   const updatePaymentMethod = useCallback(
     async (
       localId: string,
-      data: Partial<Omit<LocalPaymentMethod, "id" | "localId" | "createdAt">>
+      data: Partial<Omit<LocalPaymentMethod, "id" | "localId" | "createdAt">>,
     ): Promise<void> => {
       // If setting as default, unset other defaults first
       if (data.isDefault) {
-        await guestDb.paymentMethods
-          .where("isDefault")
-          .equals(1)
-          .modify({ isDefault: false });
+        await guestDb.paymentMethods.where("isDefault").equals(1).modify({ isDefault: false });
       }
 
       await guestDb.paymentMethods.where("localId").equals(localId).modify(data);
     },
-    []
+    [],
   );
 
-  const deletePaymentMethod = useCallback(
-    async (localId: string): Promise<void> => {
-      await guestDb.paymentMethods.where("localId").equals(localId).delete();
-    },
-    []
-  );
+  const deletePaymentMethod = useCallback(async (localId: string): Promise<void> => {
+    await guestDb.paymentMethods.where("localId").equals(localId).delete();
+  }, []);
 
   // Subscription operations
   const addSubscription = useCallback(
-    async (
-      data: Omit<LocalSubscription, "id" | "localId" | "createdAt">
-    ): Promise<string> => {
+    async (data: Omit<LocalSubscription, "id" | "localId" | "createdAt">): Promise<string> => {
       const localId = generateLocalId();
       await guestDb.subscriptions.add({
         ...data,
@@ -139,25 +119,22 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
       });
       return localId;
     },
-    []
+    [],
   );
 
   const updateSubscription = useCallback(
     async (
       localId: string,
-      data: Partial<Omit<LocalSubscription, "id" | "localId" | "createdAt">>
+      data: Partial<Omit<LocalSubscription, "id" | "localId" | "createdAt">>,
     ): Promise<void> => {
       await guestDb.subscriptions.where("localId").equals(localId).modify(data);
     },
-    []
+    [],
   );
 
-  const deleteSubscription = useCallback(
-    async (localId: string): Promise<void> => {
-      await guestDb.subscriptions.where("localId").equals(localId).delete();
-    },
-    []
-  );
+  const deleteSubscription = useCallback(async (localId: string): Promise<void> => {
+    await guestDb.subscriptions.where("localId").equals(localId).delete();
+  }, []);
 
   // Migration helpers
   const getDataForMigration = useCallback(async () => {
@@ -184,11 +161,7 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
     hasGuestData,
   };
 
-  return (
-    <GuestModeContext.Provider value={value}>
-      {children}
-    </GuestModeContext.Provider>
-  );
+  return <GuestModeContext.Provider value={value}>{children}</GuestModeContext.Provider>;
 }
 
 export function useGuestMode(): GuestModeContextValue {
@@ -201,4 +174,3 @@ export function useGuestMode(): GuestModeContextValue {
 
 // Re-export types for convenience
 export type { LocalSubscription, LocalPaymentMethod, BillingCycle, PaymentMethodType };
-

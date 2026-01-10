@@ -5,7 +5,6 @@ services:
       args:
         # Environment variables needed at build time (baked into Vite bundle)
         VITE_CONVEX_URL: ${VITE_CONVEX_URL}
-        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
     ports:
       - "3000:3000"
     environment:

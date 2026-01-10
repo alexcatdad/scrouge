@@ -1,4 +1,4 @@
-import { describe, test, expect, mock, beforeEach, afterEach } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
 // Mock console methods
 const originalConsole = {
@@ -41,122 +41,116 @@ describe("Monitoring Utility", () => {
     console.info = originalConsole.info;
   });
 
-  test("captureMessage logs to console when Sentry is not initialized", async () => {
+  test("captureMessage logs to console", async () => {
     // Dynamic import to reset module state
     const { captureMessage } = await import("../src/lib/monitoring");
-    
+
     captureMessage("Test message", "info");
-    
-    expect(consoleLogs.some(log => log.includes("Test message"))).toBe(true);
+
+    expect(consoleLogs.some((log) => log.includes("Test message"))).toBe(true);
   });
 
   test("captureMessage includes context in log", async () => {
     const { captureMessage } = await import("../src/lib/monitoring");
-    
+
     captureMessage("Test message", "warning", {
       userId: "user123",
       operation: "test-op",
     });
-    
-    expect(consoleLogs.some(log => log.includes("Test message"))).toBe(true);
+
+    expect(consoleLogs.some((log) => log.includes("Test message"))).toBe(true);
   });
 
   test("captureError logs error to console in development", async () => {
     const { captureError } = await import("../src/lib/monitoring");
-    
+
     const error = new Error("Test error");
     captureError(error);
-    
-    expect(consoleErrors.some(log => log.includes("Error"))).toBe(true);
+
+    expect(consoleErrors.some((log) => log.includes("Error"))).toBe(true);
   });
 
   test("captureError includes context", async () => {
     const { captureError } = await import("../src/lib/monitoring");
-    
+
     const error = new Error("Test error");
     captureError(error, {
       userId: "user123",
       operation: "test-operation",
       tags: { component: "TestComponent" },
     });
-    
+
     expect(consoleErrors.length).toBeGreaterThan(0);
   });
 
-  test("initMonitoring logs info when no DSN configured", async () => {
+  test("initMonitoring is a no-op", async () => {
     // Mock window object for browser-specific code
     (globalThis as any).window = {};
-    
+
     const { initMonitoring } = await import("../src/lib/monitoring");
-    
+
+    // Should not throw
     await initMonitoring();
-    
-    expect(consoleInfos.some(log => log.includes("No DSN configured"))).toBe(true);
-    
+
     delete (globalThis as any).window;
   });
 
   test("startTransaction returns a finish function", async () => {
     const { startTransaction } = await import("../src/lib/monitoring");
-    
+
     const transaction = startTransaction("test-transaction", "test");
-    
+
     expect(transaction).toHaveProperty("finish");
     expect(typeof transaction.finish).toBe("function");
-    
+
     // Should not throw
     transaction.finish();
   });
 
   test("setUser handles null user", async () => {
     const { setUser } = await import("../src/lib/monitoring");
-    
+
     // Should not throw
     setUser(null);
   });
 
   test("setUser handles user with email", async () => {
     const { setUser } = await import("../src/lib/monitoring");
-    
+
     // Should not throw
     setUser("user123", "test@example.com");
   });
 
-  test("addBreadcrumb does not throw when Sentry not initialized", async () => {
+  test("addBreadcrumb is a no-op", async () => {
     const { addBreadcrumb } = await import("../src/lib/monitoring");
-    
+
     // Should not throw
     addBreadcrumb("Test breadcrumb", "test", { key: "value" });
   });
 
   test("reportBoundaryError captures error with component stack", async () => {
     const { reportBoundaryError } = await import("../src/lib/monitoring");
-    
+
     const error = new Error("Boundary error");
     const componentStack = "at TestComponent\n  at App";
-    
+
     // Should not throw
     reportBoundaryError(error, componentStack);
-    
+
     expect(consoleErrors.length).toBeGreaterThan(0);
   });
 });
 
 describe("MonitoringConfig", () => {
-  test("interface should accept all optional properties", async () => {
+  test("initMonitoring accepts no arguments", async () => {
     // Mock window object for browser-specific code
     (globalThis as any).window = {};
-    
+
     const { initMonitoring } = await import("../src/lib/monitoring");
-    
-    // Should not throw with full config
-    await initMonitoring({
-      dsn: undefined,
-      environment: "test",
-      release: "1.0.0",
-      debug: true,
-    });
-    
+
+    // Should not throw with no arguments
+    await initMonitoring();
+
     delete (globalThis as any).window;
   });
 });
@@ -164,9 +158,9 @@ describe("MonitoringConfig", () => {
 describe("ErrorContext", () => {
   test("should support all context properties", async () => {
     const { captureError } = await import("../src/lib/monitoring");
-    
+
     const error = new Error("Context test");
-    
+
     // Should not throw with full context
     captureError(error, {
       userId: "user123",
@@ -182,4 +176,3 @@ describe("ErrorContext", () => {
     });
   });
 });
-

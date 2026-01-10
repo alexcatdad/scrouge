@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { cn } from "../src/lib/utils";
 
 describe("cn (className utility)", () => {
@@ -46,10 +46,7 @@ describe("cn (className utility)", () => {
   });
 
   test("handles complex tailwind merging", () => {
-    const result = cn(
-      "text-red-500",
-      "text-blue-500"
-    );
+    const result = cn("text-red-500", "text-blue-500");
     expect(result).toBe("text-blue-500");
   });
 
@@ -66,4 +63,3 @@ describe("cn (className utility)", () => {
     expect(result).toContain("lg:p-6");
   });
 });
-

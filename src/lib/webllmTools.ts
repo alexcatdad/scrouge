@@ -1,4 +1,4 @@
-import type { ToolDefinition, ToolCall } from "./webllm";
+import type { ToolCall, ToolDefinition } from "./webllm";
 
 /**
  * Tool definitions for subscription management
@@ -124,27 +124,71 @@ export const subscriptionTools: ToolDefinition[] = [
  * Build the system prompt for subscription management
  */
 export function buildSystemPrompt(
-  subscriptions: Array<{ _id: string; name: string; cost: number; currency: string; billingCycle: string; isActive: boolean }>,
-  paymentMethods: Array<{ _id: string; name: string; lastFourDigits?: string; isDefault: boolean }>
+  subscriptions: Array<{
+    _id: string;
+    name: string;
+    cost: number;
+    currency: string;
+    billingCycle: string;
+    isActive: boolean;
+    category?: string;
+  }>,
+  paymentMethods: Array<{ _id: string; name: string; lastFourDigits?: string; isDefault: boolean }>,
 ): string {
-  return `You are a helpful assistant for managing subscriptions. You can help users:
-1. Add new subscriptions
-2. Update existing subscriptions
-3. Cancel subscriptions
-4. Track spending
-5. Get reminders about upcoming payments
-6. Analyze subscription costs
+  // Calculate spending summaries for the model
+  const activeSubscriptions = subscriptions.filter((s) => s.isActive);
+  const monthlyTotal = activeSubscriptions.reduce((sum, s) => {
+    const monthlyCost =
+      s.billingCycle === "yearly"
+        ? s.cost / 12
+        : s.billingCycle === "weekly"
+          ? s.cost * 4.33
+          : s.billingCycle === "daily"
+            ? s.cost * 30
+            : s.cost;
+    return sum + monthlyCost;
+  }, 0);
+  const yearlyTotal = monthlyTotal * 12;
 
-Current subscriptions: ${JSON.stringify(subscriptions, null, 2)}
-Available payment methods: ${JSON.stringify(paymentMethods, null, 2)}
+  return `You are a helpful assistant for managing subscriptions. You help users add, update, cancel, and analyze their subscriptions.
 
-When helping with subscriptions, be specific about costs, billing cycles, and payment methods.
-If the user wants to add a subscription, use the addSubscription tool with all necessary details.
-If they want to update a subscription, use updateSubscription - you can reference by name if you don't have the ID.
-If they want to cancel, use cancelSubscription.
-If they mention a service name, try to provide helpful information about typical pricing.
+CURRENT DATA:
+- Active subscriptions: ${activeSubscriptions.length}
+- Monthly spending: $${monthlyTotal.toFixed(2)}
+- Yearly spending: $${yearlyTotal.toFixed(2)}
+- Subscriptions: ${JSON.stringify(
+    subscriptions.map((s) => ({
+      name: s.name,
+      cost: s.cost,
+      currency: s.currency,
+      billingCycle: s.billingCycle,
+      isActive: s.isActive,
+      category: s.category,
+    })),
+    null,
+    2,
+  )}
+- Payment methods: ${JSON.stringify(
+    paymentMethods.map((pm) => ({
+      name: pm.name,
+      lastFourDigits: pm.lastFourDigits,
+      isDefault: pm.isDefault,
+    })),
+    null,
+    2,
+  )}
 
-Important: When the user mentions a specific day of the month for billing (like "1st of month" or "on the 15th"), include the billingDay parameter.`;
+TOOL USAGE:
+- Use addSubscription ONLY when the user explicitly wants to ADD a new subscription
+- Use updateSubscription ONLY when the user explicitly wants to CHANGE an existing subscription
+- Use cancelSubscription ONLY when the user explicitly wants to CANCEL/REMOVE a subscription
+
+FOR QUESTIONS (spending, analytics, listing):
+- Answer directly using the data above - do NOT use tools
+- Calculate totals, averages, and summaries from the subscription data
+- Be conversational and helpful
+
+When adding subscriptions, include billingDay if the user mentions a specific billing date.`;
 }
 
 /**
@@ -162,9 +206,7 @@ export function parseToolCallArgs(toolCall: ToolCall): Record<string, unknown> {
 /**
  * Validate that a tool call has required fields
  */
-export function validateToolCall(
-  toolCall: ToolCall
-): { valid: boolean; error?: string } {
+export function validateToolCall(toolCall: ToolCall): { valid: boolean; error?: string } {
   const args = parseToolCallArgs(toolCall);
   const toolName = toolCall.function.name;
 
@@ -197,4 +239,3 @@ export function validateToolCall(
       return { valid: false, error: `Unknown tool: ${toolName}` };
   }
 }
-

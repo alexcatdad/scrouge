@@ -1,9 +1,9 @@
-import { query, mutation, action } from "./_generated/server";
-import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { internal } from "./_generated/api";
 import { generateText, tool } from "ai";
+import { v } from "convex/values";
 import { z } from "zod";
+import { internal } from "./_generated/api";
+import { action, mutation, query } from "./_generated/server";
 import { getModel } from "./lib/aiProvider";
 
 // Shared validators
@@ -11,7 +11,7 @@ const billingCycleValidator = v.union(
   v.literal("monthly"),
   v.literal("yearly"),
   v.literal("weekly"),
-  v.literal("daily")
+  v.literal("daily"),
 );
 
 const toolResultValidator = v.object({
@@ -76,12 +76,18 @@ export const generateResponse = action({
     }
 
     // Get user's subscriptions and payment methods for context
-    const subscriptions: SubscriptionContext = await ctx.runQuery(internal.subscriptions.listInternal, {
-      userId,
-    });
-    const paymentMethods: PaymentMethodContext = await ctx.runQuery(internal.paymentMethods.listInternal, {
-      userId,
-    });
+    const subscriptions: SubscriptionContext = await ctx.runQuery(
+      internal.subscriptions.listInternal,
+      {
+        userId,
+      },
+    );
+    const paymentMethods: PaymentMethodContext = await ctx.runQuery(
+      internal.paymentMethods.listInternal,
+      {
+        userId,
+      },
+    );
 
     const systemPrompt: string = `You are a helpful assistant for managing subscriptions. You can help users:
 1. Add new subscriptions
@@ -117,9 +123,14 @@ If they mention a service name, try to provide helpful information about typical
               name: z.string().describe("Service name (e.g., Netflix, Spotify)"),
               cost: z.number().describe("Cost per billing cycle"),
               currency: z.string().default("USD").describe("Currency code (e.g., USD, EUR)"),
-              billingCycle: z.enum(["monthly", "yearly", "weekly", "daily"]).describe("Billing frequency"),
+              billingCycle: z
+                .enum(["monthly", "yearly", "weekly", "daily"])
+                .describe("Billing frequency"),
               paymentMethodId: z.string().optional().describe("Payment method ID if available"),
-              category: z.string().optional().describe("Category (e.g., Entertainment, Software, Cloud)"),
+              category: z
+                .string()
+                .optional()
+                .describe("Category (e.g., Entertainment, Software, Cloud)"),
               website: z.string().optional().describe("Service website URL"),
               description: z.string().optional().describe("Additional description"),
               notes: z.string().optional().describe("Any additional notes"),
@@ -161,19 +172,22 @@ If they mention a service name, try to provide helpful information about typical
               }
 
               try {
-                const subscriptionId = await ctx.runMutation(internal.subscriptions.createInternal, {
-                  userId,
-                  name: params.name,
-                  cost: params.cost,
-                  currency: params.currency || "USD",
-                  billingCycle: params.billingCycle,
-                  nextBillingDate,
-                  paymentMethodId: paymentMethodId as any,
-                  category: params.category || "Other",
-                  website: params.website,
-                  description: params.description,
-                  notes: params.notes,
-                });
+                const subscriptionId = await ctx.runMutation(
+                  internal.subscriptions.createInternal,
+                  {
+                    userId,
+                    name: params.name,
+                    cost: params.cost,
+                    currency: params.currency || "USD",
+                    billingCycle: params.billingCycle,
+                    nextBillingDate,
+                    paymentMethodId: paymentMethodId as any,
+                    category: params.category || "Other",
+                    website: params.website,
+                    description: params.description,
+                    notes: params.notes,
+                  },
+                );
 
                 return {
                   success: true,
@@ -194,7 +208,10 @@ If they mention a service name, try to provide helpful information about typical
               subscriptionId: z.string().describe("ID of the subscription to update"),
               name: z.string().optional().describe("New service name"),
               cost: z.number().optional().describe("New cost"),
-              billingCycle: z.enum(["monthly", "yearly", "weekly", "daily"]).optional().describe("New billing cycle"),
+              billingCycle: z
+                .enum(["monthly", "yearly", "weekly", "daily"])
+                .optional()
+                .describe("New billing cycle"),
               isActive: z.boolean().optional().describe("Whether subscription is active"),
             }),
             // @ts-expect-error - Tool execute function types are inferred from parameters schema
@@ -393,7 +410,9 @@ export const executeLocalToolCall = mutation({
         const subscription = toolArgs.subscriptionId
           ? subscriptions.find((s) => s._id === toolArgs.subscriptionId)
           : toolArgs.subscriptionName
-            ? subscriptions.find((s) => s.name.toLowerCase() === toolArgs.subscriptionName!.toLowerCase())
+            ? subscriptions.find(
+                (s) => s.name.toLowerCase() === toolArgs.subscriptionName!.toLowerCase(),
+              )
             : null;
 
         if (!subscription) {
@@ -431,7 +450,9 @@ export const executeLocalToolCall = mutation({
         const subscription = toolArgs.subscriptionId
           ? subscriptions.find((s) => s._id === toolArgs.subscriptionId)
           : toolArgs.subscriptionName
-            ? subscriptions.find((s) => s.name.toLowerCase() === toolArgs.subscriptionName!.toLowerCase())
+            ? subscriptions.find(
+                (s) => s.name.toLowerCase() === toolArgs.subscriptionName!.toLowerCase(),
+              )
             : null;
 
         if (!subscription) {
@@ -482,7 +503,7 @@ export const getLocalInferenceContext = query({
         billingCycle: billingCycleValidator,
         isActive: v.boolean(),
         category: v.string(),
-      })
+      }),
     ),
     paymentMethods: v.array(
       v.object({
@@ -490,7 +511,7 @@ export const getLocalInferenceContext = query({
         name: v.string(),
         lastFourDigits: v.optional(v.string()),
         isDefault: v.boolean(),
-      })
+      }),
     ),
   }),
   handler: async (ctx) => {

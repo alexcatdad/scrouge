@@ -1,7 +1,7 @@
-import { query, mutation, internalQuery } from "./_generated/server";
-import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { encrypt, decrypt } from "./lib/encryption";
+import { v } from "convex/values";
+import { internalQuery, mutation, query } from "./_generated/server";
+import { decrypt, encrypt } from "./lib/encryption";
 
 // Shared validator for AI provider
 const aiProviderValidator = v.union(
@@ -9,7 +9,7 @@ const aiProviderValidator = v.union(
   v.literal("xai"),
   v.literal("mistral"),
   v.literal("ollama"),
-  v.literal("webllm")
+  v.literal("webllm"),
 );
 
 async function getLoggedInUser(ctx: any) {
@@ -36,20 +36,20 @@ export const get = query({
       updatedAt: v.number(),
       hasApiKey: v.boolean(),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx) => {
     const userId = await getLoggedInUser(ctx);
-    
+
     const settings = await ctx.db
       .query("userAISettings")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     if (!settings) {
       return null;
     }
-    
+
     // Return settings without the encrypted key for security
     return {
       _id: settings._id,
@@ -77,18 +77,18 @@ export const save = mutation({
   returns: v.id("userAISettings"),
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
-    
+
     // Encrypt the API key before storing
     const encryptedApiKey = await encrypt(args.apiKey);
-    
+
     // Check if settings already exist
     const existing = await ctx.db
       .query("userAISettings")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     const now = Date.now();
-    
+
     if (existing) {
       // Update existing settings
       await ctx.db.patch(existing._id, {
@@ -122,16 +122,16 @@ export const remove = mutation({
   returns: v.object({ success: v.boolean() }),
   handler: async (ctx) => {
     const userId = await getLoggedInUser(ctx);
-    
+
     const settings = await ctx.db
       .query("userAISettings")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    
+
     if (settings) {
       await ctx.db.delete(settings._id);
     }
-    
+
     return { success: true };
   },
 });
@@ -157,25 +157,24 @@ export const getDecrypted = internalQuery({
       updatedAt: v.number(),
       apiKey: v.string(), // Decrypted key
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx, args) => {
     const settings = await ctx.db
       .query("userAISettings")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .first();
-    
+
     if (!settings) {
       return null;
     }
-    
+
     // Decrypt the API key for use in AI calls
     const apiKey = await decrypt(settings.encryptedApiKey);
-    
+
     return {
       ...settings,
       apiKey, // Decrypted key
     };
   },
 });
-

@@ -1,6 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useCallback } from "react";
-import { guestDb, type ChatMessageRole, type LocalChatMessage } from "./guestDb";
+import { type ChatMessageRole, guestDb, type LocalChatMessage } from "./guestDb";
 
 export interface ChatMessage {
   id: number;
@@ -15,10 +15,7 @@ export interface ChatMessage {
  */
 export function useChatStorage() {
   // Get messages ordered by timestamp (oldest first for display)
-  const messages = useLiveQuery(
-    () => guestDb.chatMessages.orderBy("timestamp").toArray(),
-    []
-  );
+  const messages = useLiveQuery(() => guestDb.chatMessages.orderBy("timestamp").toArray(), []);
 
   const addMessage = useCallback(
     async (content: string, role: ChatMessageRole): Promise<number> => {
@@ -29,7 +26,7 @@ export function useChatStorage() {
       };
       return await guestDb.chatMessages.add(message);
     },
-    []
+    [],
   );
 
   const clearMessages = useCallback(async (): Promise<void> => {
@@ -42,4 +39,3 @@ export function useChatStorage() {
     clearMessages,
   };
 }
-

@@ -1,9 +1,9 @@
-import { useQuery, useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { api } from "../../convex/_generated/api";
-import { useGuestMode, type LocalSubscription, type LocalPaymentMethod } from "./guestMode";
-import { guestDb, type BillingCycle } from "./guestDb";
 import type { Id } from "../../convex/_generated/dataModel";
+import { type BillingCycle, guestDb } from "./guestDb";
+import { type LocalPaymentMethod, type LocalSubscription, useGuestMode } from "./guestMode";
 
 // Unified subscription type that works for both guest and authenticated modes
 export interface UnifiedSubscription {
@@ -35,7 +35,7 @@ export interface UnifiedPaymentMethod {
 // Convert local subscription to unified format
 function toUnifiedSubscription(
   local: LocalSubscription,
-  paymentMethods: LocalPaymentMethod[]
+  paymentMethods: LocalPaymentMethod[],
 ): UnifiedSubscription {
   const pm = paymentMethods.find((p) => p.localId === local.paymentMethodLocalId);
   return {
@@ -70,37 +70,34 @@ function toUnifiedPaymentMethod(local: LocalPaymentMethod): UnifiedPaymentMethod
 /**
  * Hook to get subscriptions - works for both guest and authenticated users
  */
-export function useSubscriptions(options?: { activeOnly?: boolean }): UnifiedSubscription[] | undefined {
+export function useSubscriptions(options?: {
+  activeOnly?: boolean;
+}): UnifiedSubscription[] | undefined {
   const { isGuest } = useGuestMode();
 
   // Guest mode: use Dexie live query
   const guestPaymentMethods = useLiveQuery(
     () => (isGuest ? guestDb.paymentMethods.toArray() : Promise.resolve([])),
-    [isGuest]
+    [isGuest],
   );
 
-  const guestSubscriptions = useLiveQuery(
-    () => {
-      if (!isGuest) return Promise.resolve([]);
-      if (options?.activeOnly) {
-        return guestDb.subscriptions.where("isActive").equals(1).toArray();
-      }
-      return guestDb.subscriptions.toArray();
-    },
-    [isGuest, options?.activeOnly]
-  );
+  const guestSubscriptions = useLiveQuery(() => {
+    if (!isGuest) return Promise.resolve([]);
+    if (options?.activeOnly) {
+      return guestDb.subscriptions.where("isActive").equals(1).toArray();
+    }
+    return guestDb.subscriptions.toArray();
+  }, [isGuest, options?.activeOnly]);
 
   // Authenticated mode: use Convex query
   const convexSubscriptions = useQuery(
     api.subscriptions.list,
-    isGuest ? "skip" : { activeOnly: options?.activeOnly }
+    isGuest ? "skip" : { activeOnly: options?.activeOnly },
   );
 
   if (isGuest) {
     if (!guestSubscriptions || !guestPaymentMethods) return undefined;
-    return guestSubscriptions.map((sub) =>
-      toUnifiedSubscription(sub, guestPaymentMethods)
-    );
+    return guestSubscriptions.map((sub) => toUnifiedSubscription(sub, guestPaymentMethods));
   }
 
   if (!convexSubscriptions) return undefined;
@@ -138,14 +135,11 @@ export function usePaymentMethods(): UnifiedPaymentMethod[] | undefined {
   // Guest mode: use Dexie live query
   const guestPaymentMethods = useLiveQuery(
     () => (isGuest ? guestDb.paymentMethods.toArray() : Promise.resolve([])),
-    [isGuest]
+    [isGuest],
   );
 
   // Authenticated mode: use Convex query
-  const convexPaymentMethods = useQuery(
-    api.paymentMethods.list,
-    isGuest ? "skip" : {}
-  );
+  const convexPaymentMethods = useQuery(api.paymentMethods.list, isGuest ? "skip" : {});
 
   if (isGuest) {
     if (!guestPaymentMethods) return undefined;
@@ -173,26 +167,20 @@ export function useUpcomingBills(days: number = 30): UnifiedSubscription[] | und
   // Guest mode: use Dexie live query
   const guestPaymentMethods = useLiveQuery(
     () => (isGuest ? guestDb.paymentMethods.toArray() : Promise.resolve([])),
-    [isGuest]
+    [isGuest],
   );
 
-  const guestSubscriptions = useLiveQuery(
-    () => {
-      if (!isGuest) return Promise.resolve([]);
-      return guestDb.subscriptions
-        .where("isActive")
-        .equals(1)
-        .and((sub) => sub.nextBillingDate <= cutoffDate)
-        .toArray();
-    },
-    [isGuest, cutoffDate]
-  );
+  const guestSubscriptions = useLiveQuery(() => {
+    if (!isGuest) return Promise.resolve([]);
+    return guestDb.subscriptions
+      .where("isActive")
+      .equals(1)
+      .and((sub) => sub.nextBillingDate <= cutoffDate)
+      .toArray();
+  }, [isGuest, cutoffDate]);
 
   // Authenticated mode: use Convex query
-  const convexUpcoming = useQuery(
-    api.subscriptions.getUpcoming,
-    isGuest ? "skip" : { days }
-  );
+  const convexUpcoming = useQuery(api.subscriptions.getUpcoming, isGuest ? "skip" : { days });
 
   if (isGuest) {
     if (!guestSubscriptions || !guestPaymentMethods) return undefined;
@@ -234,19 +222,13 @@ export function useTotalCosts(): Record<string, number> | undefined {
   const { isGuest } = useGuestMode();
 
   // Guest mode: use Dexie live query
-  const guestSubscriptions = useLiveQuery(
-    () => {
-      if (!isGuest) return Promise.resolve([]);
-      return guestDb.subscriptions.where("isActive").equals(1).toArray();
-    },
-    [isGuest]
-  );
+  const guestSubscriptions = useLiveQuery(() => {
+    if (!isGuest) return Promise.resolve([]);
+    return guestDb.subscriptions.where("isActive").equals(1).toArray();
+  }, [isGuest]);
 
   // Authenticated mode: use Convex query
-  const convexTotals = useQuery(
-    api.subscriptions.getTotalCost,
-    isGuest ? "skip" : {}
-  );
+  const convexTotals = useQuery(api.subscriptions.getTotalCost, isGuest ? "skip" : {});
 
   if (isGuest) {
     if (!guestSubscriptions) return undefined;
@@ -282,8 +264,7 @@ export function useTotalCosts(): Record<string, number> | undefined {
  * Hook to get subscription mutations - returns functions that work for both modes
  */
 export function useSubscriptionMutations() {
-  const { isGuest, addSubscription, updateSubscription, deleteSubscription } =
-    useGuestMode();
+  const { isGuest, addSubscription, updateSubscription, deleteSubscription } = useGuestMode();
 
   const createConvex = useMutation(api.subscriptions.create);
   const updateConvex = useMutation(api.subscriptions.update);
@@ -337,7 +318,7 @@ export function useSubscriptionMutations() {
         website?: string;
         isActive?: boolean;
         notes?: string;
-      }
+      },
     ) => {
       if (isGuest) {
         const updateData: any = { ...data };
@@ -367,8 +348,7 @@ export function useSubscriptionMutations() {
  * Hook to get payment method mutations - returns functions that work for both modes
  */
 export function usePaymentMethodMutations() {
-  const { isGuest, addPaymentMethod, updatePaymentMethod, deletePaymentMethod } =
-    useGuestMode();
+  const { isGuest, addPaymentMethod, updatePaymentMethod, deletePaymentMethod } = useGuestMode();
 
   const createConvex = useMutation(api.paymentMethods.create);
   const updateConvex = useMutation(api.paymentMethods.update);
@@ -402,7 +382,7 @@ export function usePaymentMethodMutations() {
         lastFourDigits?: string;
         expiryDate?: string;
         isDefault?: boolean;
-      }
+      },
     ) => {
       if (isGuest) {
         return updatePaymentMethod(id, data);
@@ -421,4 +401,3 @@ export function usePaymentMethodMutations() {
     },
   };
 }
-

@@ -169,7 +169,8 @@ export const en: Translations = {
     tagline: "Premium Subscription Tracker",
     headline: "Master Your",
     headlineHighlight: "Subscriptions",
-    description: "Effortlessly track every subscription, monitor spending patterns, and reclaim control of your finances.",
+    description:
+      "Effortlessly track every subscription, monitor spending patterns, and reclaim control of your finances.",
     features: {
       paymentTracking: {
         title: "Payment Tracking",
@@ -187,4 +188,3 @@ export const en: Translations = {
     securityNote: "Your data is encrypted and secure. We never share your information.",
   },
 };
-

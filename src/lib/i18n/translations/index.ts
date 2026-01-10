@@ -1,6 +1,6 @@
+import type { Language, Translations } from "../types";
 import { en } from "./en";
 import { es } from "./es";
-import type { Language, Translations } from "../types";
 
 /**
  * All available translations
@@ -20,4 +20,3 @@ export const translations: Record<Language, Translations> = {
 export function getTranslations(language: Language): Translations {
   return translations[language] || translations.en;
 }
-

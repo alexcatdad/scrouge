@@ -221,7 +221,6 @@ docker run -p 3000:3000 scrouge
 ### Local Development (`.env` file)
 
 - `VITE_CONVEX_URL` - Convex deployment URL (required)
-- `VITE_SENTRY_DSN` - Sentry DSN for error monitoring (optional)
 - `PORT` - Server port for production (defaults to 3000)
 
 ### Convex Dashboard

@@ -2,12 +2,7 @@ import Dexie, { type Table } from "dexie";
 
 // Types matching Convex schema structure for guest mode
 export type BillingCycle = "monthly" | "yearly" | "weekly" | "daily";
-export type PaymentMethodType =
-  | "credit_card"
-  | "debit_card"
-  | "bank_account"
-  | "paypal"
-  | "other";
+export type PaymentMethodType = "credit_card" | "debit_card" | "bank_account" | "paypal" | "other";
 
 export interface LocalPaymentMethod {
   id?: number;
@@ -54,13 +49,11 @@ export class GuestDB extends Dexie {
   constructor() {
     super("scrougeGuest");
     this.version(1).stores({
-      subscriptions:
-        "++id, localId, name, nextBillingDate, paymentMethodLocalId, isActive",
+      subscriptions: "++id, localId, name, nextBillingDate, paymentMethodLocalId, isActive",
       paymentMethods: "++id, localId, isDefault",
     });
     this.version(2).stores({
-      subscriptions:
-        "++id, localId, name, nextBillingDate, paymentMethodLocalId, isActive",
+      subscriptions: "++id, localId, name, nextBillingDate, paymentMethodLocalId, isActive",
       paymentMethods: "++id, localId, isDefault",
       chatMessages: "++id, timestamp",
     });
@@ -92,4 +85,3 @@ export const guestDb = new GuestDB();
 export function generateLocalId(): string {
   return crypto.randomUUID();
 }
-

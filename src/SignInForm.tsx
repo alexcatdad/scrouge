@@ -57,21 +57,30 @@ export function SignInForm() {
           {submitting ? (
             <span className="flex items-center justify-center gap-2">
               <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
               </svg>
               Processing...
             </span>
+          ) : flow === "signIn" ? (
+            "Sign in"
           ) : (
-            flow === "signIn" ? "Sign in" : "Create account"
+            "Create account"
           )}
         </button>
         <div className="text-center text-sm text-secondary">
-          <span>
-            {flow === "signIn"
-              ? "Don't have an account? "
-              : "Already have an account? "}
-          </span>
+          <span>{flow === "signIn" ? "Don't have an account? " : "Already have an account? "}</span>
           <button
             type="button"
             className="text-primary hover:text-primary-hover font-medium transition-colors"
@@ -83,24 +92,30 @@ export function SignInForm() {
       </form>
 
       <div className="flex items-center gap-4 my-6">
-        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[rgba(113,113,122,0.3)] to-transparent" />
-        <span className="text-secondary text-sm">or continue with</span>
-        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[rgba(113,113,122,0.3)] to-transparent" />
+        <div className="flex-1 divider-gold" />
+        <span className="text-secondary/60 text-xs font-medium tracking-wide uppercase">
+          or continue with
+        </span>
+        <div className="flex-1 divider-gold" />
       </div>
 
       <div className="flex flex-col gap-3">
         <button
-          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-[rgba(113,113,122,0.2)] text-white font-medium hover:bg-white/10 hover:border-[rgba(113,113,122,0.3)] transition-all"
+          className="social-auth-btn social-auth-btn-github"
           onClick={() => void signIn("github")}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+              clipRule="evenodd"
+            />
           </svg>
           GitHub
         </button>
 
         <button
-          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-[#fd4f00]/10 border border-[#fd4f00]/20 text-[#fd4f00] font-medium hover:bg-[#fd4f00]/20 hover:border-[#fd4f00]/30 transition-all"
+          className="social-auth-btn social-auth-btn-authentik"
           onClick={() => void signIn("authentik")}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -109,12 +124,19 @@ export function SignInForm() {
           Authentik
         </button>
 
-        <button
-          className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-[rgba(113,113,122,0.2)] text-secondary font-medium hover:bg-white/10 hover:text-white hover:border-[rgba(113,113,122,0.3)] transition-all"
-          onClick={handleGuestMode}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <button className="social-auth-btn social-auth-btn-guest" onClick={handleGuestMode}>
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+            />
           </svg>
           Continue as guest
         </button>

@@ -169,7 +169,8 @@ export const es: Translations = {
     tagline: "Rastreador de Suscripciones Premium",
     headline: "Domina Tus",
     headlineHighlight: "Suscripciones",
-    description: "Rastrea sin esfuerzo cada suscripción, monitorea patrones de gasto y recupera el control de tus finanzas.",
+    description:
+      "Rastrea sin esfuerzo cada suscripción, monitorea patrones de gasto y recupera el control de tus finanzas.",
     features: {
       paymentTracking: {
         title: "Seguimiento de Pagos",
@@ -187,4 +188,3 @@ export const es: Translations = {
     securityNote: "Tus datos están encriptados y seguros. Nunca compartimos tu información.",
   },
 };
-

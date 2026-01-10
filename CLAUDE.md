@@ -20,8 +20,11 @@ bun run preview        # Vite preview server
 # Serve production build with Bun
 bun run serve          # Bun server serving dist/
 
-# Lint (TypeScript type checking)
-bun run lint           # Runs tsc on both convex/ and src/
+# Lint and format (Biome + TypeScript)
+bun run lint           # Runs Biome check + tsc on both convex/ and src/
+bun run lint:fix       # Auto-fix linting and formatting issues
+bun run format         # Format code with Biome
+bun run typecheck      # TypeScript type checking only
 ```
 
 ## Architecture
@@ -49,7 +52,7 @@ src/
   components/     # Feature components (Dashboard, Chat, Subscriptions, etc.)
   lib/
     env.ts        # Type-safe environment variables (t3-env)
-    monitoring.ts # Error monitoring (Sentry integration)
+    monitoring.ts # Error monitoring (console-only)
   index.css       # Tailwind source CSS
   vite-env.d.ts   # TypeScript declarations for import.meta.env
 convex/
@@ -86,7 +89,6 @@ export const myQuery = query({
 
 **Local** (in `.env` or `.env.local`):
 - `VITE_CONVEX_URL` - Convex deployment URL (required, baked into build)
-- `VITE_SENTRY_DSN` - Sentry DSN for error monitoring (optional)
 - `PORT` - Server port for production (defaults to 3000)
 
 **Convex Dashboard**:

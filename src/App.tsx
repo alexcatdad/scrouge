@@ -1,13 +1,13 @@
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
-import { SignInForm } from "./SignInForm";
-import { SignOutButton } from "./SignOutButton";
 import { Toaster } from "sonner";
+import { api } from "../convex/_generated/api";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SubscriptionDashboard } from "./components/SubscriptionDashboard";
 import { GuestModeProvider, useGuestMode } from "./lib/guestMode";
-import { useMigration } from "./lib/useMigration";
-import { ErrorBoundary } from "./components/ErrorBoundary";
 import { I18nProvider } from "./lib/i18n";
+import { useMigration } from "./lib/useMigration";
+import { SignInForm } from "./SignInForm";
+import { SignOutButton } from "./SignOutButton";
 
 function AppContent() {
   const { isGuest, exitGuestMode } = useGuestMode();
@@ -17,24 +17,30 @@ function AppContent() {
       {/* Background layers */}
       <div className="bg-pattern" />
       <div className="bg-noise" />
+      <div className="bg-orb bg-orb-gold" />
+      <div className="bg-orb bg-orb-teal" />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-[rgba(113,113,122,0.15)] bg-[rgba(9,9,11,0.8)] backdrop-blur-xl">
+      <header className="header-nav">
         <div className="max-w-7xl mx-auto h-16 flex justify-between items-center px-6">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-[#c4914a] flex items-center justify-center shadow-lg shadow-primary/20">
-              <svg className="w-5 h-5 text-[#09090b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="header-logo">
+            <div className="header-logo-icon">
+              <svg
+                className="w-4 h-4 text-[#0a0a0b]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </div>
-            <span className="font-display text-xl font-semibold tracking-tight text-gradient-gold">
-              Scrouge
-            </span>
-            {isGuest && (
-              <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-secondary/20 text-secondary border border-secondary/30">
-                Guest Mode
-              </span>
-            )}
+            <span className="header-logo-text">Scrouge</span>
+            {isGuest && <span className="guest-badge ml-3">Guest</span>}
           </div>
           {isGuest ? (
             <button
@@ -42,7 +48,12 @@ function AppContent() {
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-secondary hover:text-white transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
               </svg>
               Exit Guest Mode
             </button>
@@ -64,10 +75,10 @@ function AppContent() {
         position="bottom-right"
         toastOptions={{
           style: {
-            background: 'rgba(39, 39, 42, 0.95)',
-            border: '1px solid rgba(113, 113, 122, 0.2)',
-            color: '#fafafa',
-            backdropFilter: 'blur(12px)',
+            background: "rgba(39, 39, 42, 0.95)",
+            border: "1px solid rgba(113, 113, 122, 0.2)",
+            color: "#fafafa",
+            backdropFilter: "blur(12px)",
           },
         }}
       />
@@ -90,7 +101,7 @@ export default function App() {
 function Content() {
   const { isGuest } = useGuestMode();
   const loggedInUser = useQuery(api.auth.loggedInUser, isGuest ? "skip" : undefined);
-  
+
   // Handle migration when user becomes authenticated
   const isAuthenticated = loggedInUser !== undefined && loggedInUser !== null;
   const { isMigrating } = useMigration(isAuthenticated);
@@ -142,7 +153,9 @@ function Content() {
             Welcome back
           </p>
           <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tight mb-3">
-            <span className="text-gradient-gold">{loggedInUser?.email?.split('@')[0] || "friend"}</span>
+            <span className="text-gradient-gold">
+              {loggedInUser?.email?.split("@")[0] || "friend"}
+            </span>
           </h1>
           <p className="text-secondary text-lg">
             Track your subscriptions, manage spending, stay in control.
@@ -152,59 +165,108 @@ function Content() {
       </Authenticated>
 
       <Unauthenticated>
-        <div className="flex flex-col items-center justify-center min-h-[70vh] py-12">
+        <div className="flex flex-col items-center justify-center min-h-[80vh] py-16">
           {/* Hero section */}
-          <div className="text-center mb-16 animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <div className="text-center mb-20 max-w-3xl animate-fade-in-up">
+            {/* Pill badge */}
+            <div className="pill-badge mb-8 animate-fade-in-scale">
+              <svg fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
               Premium Subscription Tracker
             </div>
-            <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tight mb-6">
-              <span className="text-white">Master Your</span>
-              <br />
-              <span className="text-gradient-gold">Subscriptions</span>
+
+            {/* Main headline */}
+            <h1 className="font-display hero-headline font-bold mb-6">
+              <span className="text-white block">Master Your</span>
+              <span className="text-gradient-gold-shimmer">Subscriptions</span>
             </h1>
-            <p className="text-secondary text-xl max-w-xl mx-auto text-balance leading-relaxed">
-              Effortlessly track every subscription, monitor spending patterns, and reclaim control of your finances.
+
+            {/* Subtext */}
+            <p className="hero-subtext max-w-xl mx-auto text-balance">
+              Effortlessly track every subscription, monitor spending patterns, and reclaim control
+              of your finances.
             </p>
+
+            {/* Decorative element */}
+            <div className="decorative-dots mt-8 animate-fade-in animate-stagger-2">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
           </div>
 
           {/* Feature cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-16 w-full max-w-4xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20 w-full max-w-4xl">
             <div className="feature-card animate-fade-in-up animate-stagger-1">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center mb-5">
-                <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              <span className="feature-number">01</span>
+              <div className="icon-container icon-container-gold">
+                <svg
+                  className="w-5 h-5 text-primary relative z-10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  />
                 </svg>
               </div>
-              <h3 className="font-semibold text-white text-lg mb-2">Payment Tracking</h3>
-              <p className="text-secondary text-sm leading-relaxed">
+              <h3 className="font-semibold text-white text-lg mb-2 relative z-10">
+                Payment Tracking
+              </h3>
+              <p className="text-secondary text-sm leading-relaxed relative z-10">
                 Link cards and accounts. Know exactly where every dollar flows.
               </p>
             </div>
 
             <div className="feature-card animate-fade-in-up animate-stagger-2">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent-teal/20 to-accent-teal/5 border border-accent-teal/20 flex items-center justify-center mb-5">
-                <svg className="w-6 h-6 text-accent-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              <span className="feature-number">02</span>
+              <div className="icon-container icon-container-teal">
+                <svg
+                  className="w-5 h-5 text-accent-teal relative z-10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
                 </svg>
               </div>
-              <h3 className="font-semibold text-white text-lg mb-2">AI Assistant</h3>
-              <p className="text-secondary text-sm leading-relaxed">
+              <h3 className="font-semibold text-white text-lg mb-2 relative z-10">AI Assistant</h3>
+              <p className="text-secondary text-sm leading-relaxed relative z-10">
                 Conversational management. Add and analyze subscriptions naturally.
               </p>
             </div>
 
             <div className="feature-card animate-fade-in-up animate-stagger-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent-coral/20 to-accent-coral/5 border border-accent-coral/20 flex items-center justify-center mb-5">
-                <svg className="w-6 h-6 text-accent-coral" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <span className="feature-number">03</span>
+              <div className="icon-container icon-container-coral">
+                <svg
+                  className="w-5 h-5 text-accent-coral relative z-10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
                 </svg>
               </div>
-              <h3 className="font-semibold text-white text-lg mb-2">Smart Insights</h3>
-              <p className="text-secondary text-sm leading-relaxed">
+              <h3 className="font-semibold text-white text-lg mb-2 relative z-10">
+                Smart Insights
+              </h3>
+              <p className="text-secondary text-sm leading-relaxed relative z-10">
                 Real-time analytics and alerts before charges hit.
               </p>
             </div>
@@ -213,18 +275,35 @@ function Content() {
           {/* Sign in form */}
           <div className="w-full max-w-md animate-fade-in-up animate-stagger-4">
             <div className="glass-card-elevated p-8">
-              <div className="text-center mb-6">
-                <h2 className="font-display text-2xl font-semibold mb-2">Get Started</h2>
-                <p className="text-secondary text-sm">Sign in to take control of your subscriptions</p>
+              <div className="text-center mb-8">
+                <h2 className="font-display text-2xl font-semibold mb-2 text-white">Get Started</h2>
+                <p className="text-secondary text-sm">
+                  Sign in to take control of your subscriptions
+                </p>
               </div>
               <SignInForm />
             </div>
           </div>
 
           {/* Footer note */}
-          <p className="text-center text-secondary/60 text-sm mt-12 animate-fade-in">
-            Your data is encrypted and secure. We never share your information.
-          </p>
+          <div className="text-center mt-16 animate-fade-in animate-stagger-5">
+            <div className="inline-flex items-center gap-2 text-secondary/50 text-sm">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                />
+              </svg>
+              <span>Your data is encrypted and secure</span>
+            </div>
+          </div>
         </div>
       </Unauthenticated>
     </div>

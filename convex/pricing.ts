@@ -1,6 +1,6 @@
-import { action, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { action, internalMutation, query } from "./_generated/server";
 
 // Shared validator for pricing plan
 const pricingPlanValidator = v.object({
@@ -20,7 +20,7 @@ const servicePricingValidator = v.object({
 });
 
 export const fetchServicePricing = action({
-  args: { 
+  args: {
     serviceName: v.string(),
     website: v.string(),
   },
@@ -28,7 +28,7 @@ export const fetchServicePricing = action({
   handler: async (ctx, args) => {
     // This is a placeholder for actual web scraping or API integration
     // In a real implementation, you would use web scraping libraries or service APIs
-    
+
     const mockPricingData = {
       serviceName: args.serviceName,
       website: args.website,
@@ -38,29 +38,29 @@ export const fetchServicePricing = action({
           price: 9.99,
           currency: "USD",
           billingCycle: "monthly",
-          features: ["Basic features", "Email support"]
+          features: ["Basic features", "Email support"],
         },
         {
           name: "Pro",
           price: 19.99,
           currency: "USD",
           billingCycle: "monthly",
-          features: ["All basic features", "Priority support", "Advanced analytics"]
+          features: ["All basic features", "Priority support", "Advanced analytics"],
         },
         {
           name: "Enterprise",
           price: 49.99,
           currency: "USD",
           billingCycle: "monthly",
-          features: ["All pro features", "Custom integrations", "Dedicated support"]
-        }
+          features: ["All pro features", "Custom integrations", "Dedicated support"],
+        },
       ],
       lastUpdated: Date.now(),
     };
-    
+
     // Store the pricing data
     await ctx.runMutation(internal.pricing.storePricing, mockPricingData);
-    
+
     return mockPricingData;
   },
 });
@@ -79,7 +79,7 @@ export const storePricing = internalMutation({
       .query("servicePricing")
       .withIndex("by_service", (q) => q.eq("serviceName", args.serviceName))
       .first();
-    
+
     if (existing) {
       await ctx.db.patch(existing._id, args);
       return existing._id;
@@ -100,7 +100,7 @@ export const getPricing = query({
       plans: v.array(pricingPlanValidator),
       lastUpdated: v.number(),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx, args) => {
     return await ctx.db

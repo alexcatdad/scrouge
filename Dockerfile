@@ -11,11 +11,9 @@ COPY . .
 # Build arguments for environment variables needed at build time
 # These are baked into the Vite bundle
 ARG VITE_CONVEX_URL
-ARG VITE_SENTRY_DSN
 
 # Set environment variables for the build
 ENV VITE_CONVEX_URL=${VITE_CONVEX_URL}
-ENV VITE_SENTRY_DSN=${VITE_SENTRY_DSN}
 
 # Build the frontend with Vite
 RUN bun run build

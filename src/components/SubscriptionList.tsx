@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { useSubscriptionMutations, type UnifiedSubscription } from "../lib/useSubscriptionData";
+import { type UnifiedSubscription, useSubscriptionMutations } from "../lib/useSubscriptionData";
 
 interface SubscriptionListProps {
   subscriptions: UnifiedSubscription[];
@@ -12,7 +12,7 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
 
   const { update: updateSubscription, remove: removeSubscription } = useSubscriptionMutations();
 
-  const filteredSubscriptions = subscriptions.filter(sub => {
+  const filteredSubscriptions = subscriptions.filter((sub) => {
     if (filter === "active") return sub.isActive;
     if (filter === "inactive") return !sub.isActive;
     return true;
@@ -34,8 +34,8 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
   const handleToggleActive = async (id: string, isActive: boolean) => {
     try {
       await updateSubscription(id, { isActive: !isActive });
-      toast.success(`Subscription ${!isActive ? 'activated' : 'paused'}`);
-    } catch (error) {
+      toast.success(`Subscription ${!isActive ? "activated" : "paused"}`);
+    } catch (_error) {
       toast.error("Failed to update subscription");
     }
   };
@@ -45,15 +45,15 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
       try {
         await removeSubscription(id);
         toast.success("Subscription deleted");
-      } catch (error) {
+      } catch (_error) {
         toast.error("Failed to delete subscription");
       }
     }
   };
 
   const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
       currency: currency,
     }).format(amount);
   };
@@ -96,12 +96,24 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
         {sortedSubscriptions.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-white/5 flex items-center justify-center">
-              <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              <svg
+                className="w-6 h-6 text-secondary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                />
               </svg>
             </div>
             <p className="text-secondary">No subscriptions found</p>
-            <p className="text-secondary/60 text-sm mt-1">Add your first subscription to get started</p>
+            <p className="text-secondary/60 text-sm mt-1">
+              Add your first subscription to get started
+            </p>
           </div>
         ) : (
           sortedSubscriptions.map((subscription) => {
@@ -114,8 +126,10 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h4 className="font-semibold text-lg text-white">{subscription.name}</h4>
-                      <span className={`badge ${subscription.isActive ? 'badge-teal' : 'badge-muted'}`}>
-                        {subscription.isActive ? 'Active' : 'Paused'}
+                      <span
+                        className={`badge ${subscription.isActive ? "badge-teal" : "badge-muted"}`}
+                      >
+                        {subscription.isActive ? "Active" : "Paused"}
                       </span>
                       <span className="badge badge-gold">{subscription.category}</span>
                     </div>
@@ -126,17 +140,23 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
 
                     <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                       <span className="text-secondary">
-                        <span className="text-white font-medium">{formatCurrency(subscription.cost, subscription.currency)}</span>
+                        <span className="text-white font-medium">
+                          {formatCurrency(subscription.cost, subscription.currency)}
+                        </span>
                         <span className="text-secondary/60"> / {subscription.billingCycle}</span>
                       </span>
                       {subscription.paymentMethod && (
-                        <span className="text-secondary">
-                          {subscription.paymentMethod.name}
-                        </span>
+                        <span className="text-secondary">{subscription.paymentMethod.name}</span>
                       )}
                       {subscription.isActive && (
-                        <span className={isUrgent ? 'text-accent-coral font-medium' : 'text-secondary'}>
-                          {daysUntilBilling > 0 ? `Due in ${daysUntilBilling} days` : daysUntilBilling === 0 ? 'Due today' : 'Overdue'}
+                        <span
+                          className={isUrgent ? "text-accent-coral font-medium" : "text-secondary"}
+                        >
+                          {daysUntilBilling > 0
+                            ? `Due in ${daysUntilBilling} days`
+                            : daysUntilBilling === 0
+                              ? "Due today"
+                              : "Overdue"}
                         </span>
                       )}
                       {subscription.website && (
@@ -147,8 +167,18 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
                           className="text-primary hover:text-primary-hover transition-colors inline-flex items-center gap-1"
                         >
                           Visit
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
                           </svg>
                         </a>
                       )}
@@ -162,9 +192,9 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => handleToggleActive(subscription._id, subscription.isActive)}
-                      className={subscription.isActive ? 'btn-ghost' : 'btn-success'}
+                      className={subscription.isActive ? "btn-ghost" : "btn-success"}
                     >
-                      {subscription.isActive ? 'Pause' : 'Activate'}
+                      {subscription.isActive ? "Pause" : "Activate"}
                     </button>
                     <button
                       onClick={() => handleDelete(subscription._id, subscription.name)}

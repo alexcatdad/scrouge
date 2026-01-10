@@ -1,23 +1,23 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import type { InitProgressReport } from "@mlc-ai/web-llm";
+import { useAction, useMutation, useQuery } from "convex/react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../convex/_generated/api";
 import { useGuestMode } from "../lib/guestMode";
 import { useChatStorage } from "../lib/useChatStorage";
+import { usePaymentMethods, useSubscriptions } from "../lib/useSubscriptionData";
 import {
+  chatWithTools,
   checkWebGPUSupport,
   initWebLLM,
-  chatWithTools,
-  type WebLLMModelId,
   type ChatMessage as WebLLMChatMessage,
+  type WebLLMModelId,
 } from "../lib/webllm";
 import {
-  subscriptionTools,
   buildSystemPrompt,
   parseToolCallArgs,
+  subscriptionTools,
   validateToolCall,
 } from "../lib/webllmTools";
-import type { InitProgressReport } from "@mlc-ai/web-llm";
-import { useSubscriptions, usePaymentMethods } from "../lib/useSubscriptionData";
 
 type WebLLMState = {
   isSupported: boolean | null;
@@ -73,7 +73,12 @@ export function ChatInterface() {
 
   // Initialize WebLLM when provider is webllm
   useEffect(() => {
-    if (!isWebLLMProvider || !webllmState.isSupported || webllmState.isReady || webllmState.isLoading) {
+    if (
+      !isWebLLMProvider ||
+      !webllmState.isSupported ||
+      webllmState.isReady ||
+      webllmState.isLoading
+    ) {
       return;
     }
 
@@ -87,7 +92,8 @@ export function ChatInterface() {
       }));
 
       try {
-        const modelId = (aiSettings?.modelId as WebLLMModelId) || "Hermes-3-Llama-3.1-8B-q4f16_1-MLC";
+        const modelId =
+          (aiSettings?.modelId as WebLLMModelId) || "Hermes-3-Llama-3.1-8B-q4f16_1-MLC";
 
         await initWebLLM(modelId, (report: InitProgressReport) => {
           setWebllmState((prev) => ({
@@ -115,7 +121,13 @@ export function ChatInterface() {
     };
 
     initModel();
-  }, [isWebLLMProvider, webllmState.isSupported, webllmState.isReady, webllmState.isLoading, aiSettings?.modelId]);
+  }, [
+    isWebLLMProvider,
+    webllmState.isSupported,
+    webllmState.isReady,
+    webllmState.isLoading,
+    aiSettings?.modelId,
+  ]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -123,7 +135,7 @@ export function ChatInterface() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, localResponse]);
+  }, [scrollToBottom]);
 
   // Handle local WebLLM inference
   const handleLocalInference = useCallback(
@@ -151,7 +163,7 @@ export function ChatInterface() {
           name: pm.name,
           lastFourDigits: pm.lastFourDigits,
           isDefault: pm.isDefault,
-        }))
+        })),
       );
 
       // Build messages for the model
@@ -181,7 +193,8 @@ export function ChatInterface() {
           if (isGuest) {
             toolResults.push({
               success: false,
-              message: "Tool execution requires an account. Please sign up to add/modify subscriptions via chat.",
+              message:
+                "Tool execution requires an account. Please sign up to add/modify subscriptions via chat.",
             });
             continue;
           }
@@ -203,7 +216,7 @@ export function ChatInterface() {
         }
         if (failedResults.length > 0) {
           if (responseContent) responseContent += "\n\n";
-          responseContent += "Some actions failed:\n" + failedResults.map((r) => r.message).join("\n");
+          responseContent += `Some actions failed:\n${failedResults.map((r) => r.message).join("\n")}`;
         }
 
         // Store assistant response locally
@@ -213,11 +226,12 @@ export function ChatInterface() {
 
       // No tool calls - just a regular response
       const responseContent =
-        result.content || "I'm not sure how to help with that. Try asking me to add, update, or cancel a subscription.";
+        result.content ||
+        "I'm not sure how to help with that. Try asking me to add, update, or cancel a subscription.";
       await addMessage(responseContent, "assistant");
       return responseContent;
     },
-    [subscriptions, paymentMethods, addMessage, isGuest, executeLocalToolCall]
+    [subscriptions, paymentMethods, addMessage, isGuest, executeLocalToolCall],
   );
 
   // Handle remote inference (authenticated users with non-WebLLM provider)
@@ -233,7 +247,7 @@ export function ChatInterface() {
       await addMessage(response, "assistant");
       return response;
     },
-    [addMessage, generateRemoteResponse]
+    [addMessage, generateRemoteResponse],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -256,7 +270,7 @@ export function ChatInterface() {
           await addMessage(userMessage, "user");
           await addMessage(
             `Local AI failed to load: ${webllmState.error}. Please try refreshing the page or switch to a remote AI provider in settings.`,
-            "assistant"
+            "assistant",
           );
         } else {
           // Still loading
@@ -288,9 +302,11 @@ export function ChatInterface() {
   ];
 
   // Check if chat is available
-  const isChatAvailable = isGuest ? webllmState.isSupported !== false : aiSettings !== undefined;
+  const _isChatAvailable = isGuest ? webllmState.isSupported !== false : aiSettings !== undefined;
   const isInputDisabled =
-    isLoading || (isWebLLMProvider && webllmState.isLoading) || (isGuest && webllmState.isSupported === false);
+    isLoading ||
+    (isWebLLMProvider && webllmState.isLoading) ||
+    (isGuest && webllmState.isSupported === false);
 
   // Render WebLLM loading state
   const renderWebLLMStatus = () => {
@@ -330,7 +346,14 @@ export function ChatInterface() {
         <div className="mx-6 mb-4 p-4 rounded-xl bg-accent-teal/10 border border-accent-teal/20">
           <div className="flex items-center gap-3 mb-3">
             <svg className="w-5 h-5 text-accent-teal animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
               <path
                 className="opacity-75"
                 fill="currentColor"
@@ -341,7 +364,9 @@ export function ChatInterface() {
               <p className="text-accent-teal font-medium text-sm">Loading Local AI Model</p>
               <p className="text-secondary text-xs mt-0.5">{webllmState.progressText}</p>
             </div>
-            <span className="text-accent-teal text-sm font-mono">{Math.round(webllmState.progress * 100)}%</span>
+            <span className="text-accent-teal text-sm font-mono">
+              {Math.round(webllmState.progress * 100)}%
+            </span>
           </div>
           <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div
@@ -398,7 +423,12 @@ export function ChatInterface() {
   const renderGuestNoWebGPU = () => (
     <div className="flex flex-col items-center justify-center h-full text-center">
       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/20 flex items-center justify-center mb-6">
-        <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-8 h-8 text-amber-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -409,8 +439,8 @@ export function ChatInterface() {
       </div>
       <h4 className="text-lg font-semibold text-white mb-2">Browser Not Supported</h4>
       <p className="text-secondary text-sm max-w-sm mb-6">
-        AI chat requires WebGPU which isn't supported in your browser. Please use Chrome 113+ or Edge 113+ for local AI,
-        or sign up to use cloud-based AI providers.
+        AI chat requires WebGPU which isn't supported in your browser. Please use Chrome 113+ or
+        Edge 113+ for local AI, or sign up to use cloud-based AI providers.
       </p>
     </div>
   );
@@ -419,14 +449,24 @@ export function ChatInterface() {
   const renderConfigureAI = () => (
     <div className="flex flex-col items-center justify-center h-full text-center">
       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-secondary/20 to-secondary/5 border border-secondary/20 flex items-center justify-center mb-6">
-        <svg className="w-8 h-8 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-8 h-8 text-secondary"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={1.5}
             d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
           />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          />
         </svg>
       </div>
       <h4 className="text-lg font-semibold text-white mb-2">Configure AI Provider</h4>
@@ -441,7 +481,12 @@ export function ChatInterface() {
   const renderEmptyState = () => (
     <div className="flex flex-col items-center justify-center h-full text-center">
       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-teal/20 to-accent-teal/5 border border-accent-teal/20 flex items-center justify-center mb-6">
-        <svg className="w-8 h-8 text-accent-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-8 h-8 text-accent-teal"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -473,10 +518,15 @@ export function ChatInterface() {
   const renderMessages = () => (
     <>
       {messages?.map((msg) => (
-        <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+        <div
+          key={msg.id}
+          className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+        >
           <div className={msg.role === "user" ? "chat-message-user" : "chat-message-assistant"}>
             <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
-            <p className={`text-xs mt-2 ${msg.role === "user" ? "text-[#09090b]/50" : "text-secondary/60"}`}>
+            <p
+              className={`text-xs mt-2 ${msg.role === "user" ? "text-[#09090b]/50" : "text-secondary/60"}`}
+            >
               {formatTimestamp(msg.timestamp)}
             </p>
           </div>
@@ -491,7 +541,12 @@ export function ChatInterface() {
       <div className="px-6 py-5 border-b border-[rgba(113,113,122,0.15)]">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-teal/20 to-accent-teal/5 border border-accent-teal/20 flex items-center justify-center">
-            <svg className="w-5 h-5 text-accent-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-5 h-5 text-accent-teal"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -503,7 +558,9 @@ export function ChatInterface() {
           <div className="flex-1">
             <h3 className="font-semibold text-white">AI Assistant</h3>
             <p className="text-sm text-secondary">
-              {isWebLLMProvider ? "Local AI • Private & Offline" : "Manage subscriptions through conversation"}
+              {isWebLLMProvider
+                ? "Local AI • Private & Offline"
+                : "Manage subscriptions through conversation"}
             </p>
           </div>
           {messages && messages.length > 0 && (
@@ -523,15 +580,13 @@ export function ChatInterface() {
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {isGuest && webllmState.isSupported === false ? (
-          renderGuestNoWebGPU()
-        ) : !isGuest && !aiSettings ? (
-          renderConfigureAI()
-        ) : messages?.length === 0 ? (
-          renderEmptyState()
-        ) : (
-          renderMessages()
-        )}
+        {isGuest && webllmState.isSupported === false
+          ? renderGuestNoWebGPU()
+          : !isGuest && !aiSettings
+            ? renderConfigureAI()
+            : messages?.length === 0
+              ? renderEmptyState()
+              : renderMessages()}
 
         {isLoading && (
           <div className="flex justify-start">
@@ -596,7 +651,14 @@ export function ChatInterface() {
           >
             {isLoading ? (
               <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
                 <path
                   className="opacity-75"
                   fill="currentColor"
@@ -605,7 +667,12 @@ export function ChatInterface() {
               </svg>
             ) : (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                />
               </svg>
             )}
           </button>

@@ -2,15 +2,13 @@
 
 /**
  * Type declarations for Vite's import.meta.env
- * 
+ *
  * These augment the built-in Vite types with our custom environment variables.
  * The actual validation is done by @t3-oss/env-core in src/lib/env.ts
  */
 interface ImportMetaEnv {
   /** Convex deployment URL */
   readonly VITE_CONVEX_URL: string;
-  /** Sentry DSN for error monitoring (optional) */
-  readonly VITE_SENTRY_DSN?: string;
   /** Skip environment validation (for testing) */
   readonly SKIP_ENV_VALIDATION?: string;
   /** Vite mode: 'development' | 'production' | 'test' */
@@ -28,4 +26,3 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
-

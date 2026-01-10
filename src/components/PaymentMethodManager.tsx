@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { usePaymentMethodMutations, type UnifiedPaymentMethod } from "../lib/useSubscriptionData";
+import { type UnifiedPaymentMethod, usePaymentMethodMutations } from "../lib/useSubscriptionData";
 
 interface PaymentMethodManagerProps {
   paymentMethods: UnifiedPaymentMethod[];
@@ -16,7 +16,11 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
     isDefault: false,
   });
 
-  const { create: createPaymentMethod, update: updatePaymentMethod, remove: removePaymentMethod } = usePaymentMethodMutations();
+  const {
+    create: createPaymentMethod,
+    update: updatePaymentMethod,
+    remove: removePaymentMethod,
+  } = usePaymentMethodMutations();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +53,7 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
     try {
       await updatePaymentMethod(id, { isDefault: true });
       toast.success("Default payment method updated");
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to update payment method");
     }
   };
@@ -76,17 +80,32 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
   const paymentTypeIcons: Record<string, JSX.Element> = {
     credit_card: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+        />
       </svg>
     ),
     debit_card: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+        />
       </svg>
     ),
     bank_account: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"
+        />
       </svg>
     ),
     paypal: (
@@ -96,7 +115,12 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
     ),
     other: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"
+        />
       </svg>
     ),
   };
@@ -109,7 +133,12 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
           onClick={() => setIsAdding(true)}
           className="w-full py-4 px-6 glass-card flex items-center justify-center gap-3 text-primary font-medium hover:border-primary/30 transition-all group"
         >
-          <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="w-5 h-5 transition-transform group-hover:scale-110"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Add Payment Method
@@ -123,7 +152,12 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
               className="w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:text-white hover:bg-white/5 transition-all"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -155,7 +189,9 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
                   className="input-field"
                 >
                   {Object.entries(paymentTypeLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -168,16 +204,16 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
                   type="text"
                   maxLength={4}
                   value={formData.lastFourDigits}
-                  onChange={(e) => setFormData({ ...formData, lastFourDigits: e.target.value.replace(/\D/g, '') })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, lastFourDigits: e.target.value.replace(/\D/g, "") })
+                  }
                   className="input-field"
                   placeholder="1234"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-secondary mb-2">
-                  Expiry Date
-                </label>
+                <label className="block text-sm font-medium text-secondary mb-2">Expiry Date</label>
                 <input
                   type="month"
                   value={formData.expiryDate}
@@ -201,11 +237,7 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
               <button type="submit" className="btn-primary flex-1">
                 Add Payment Method
               </button>
-              <button
-                type="button"
-                onClick={() => setIsAdding(false)}
-                className="btn-secondary"
-              >
+              <button type="button" onClick={() => setIsAdding(false)} className="btn-secondary">
                 Cancel
               </button>
             </div>
@@ -223,12 +255,24 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
           {paymentMethods.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-white/5 flex items-center justify-center">
-                <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                <svg
+                  className="w-6 h-6 text-secondary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                  />
                 </svg>
               </div>
               <p className="text-secondary">No payment methods added</p>
-              <p className="text-secondary/60 text-sm mt-1">Add a payment method to start tracking subscriptions</p>
+              <p className="text-secondary/60 text-sm mt-1">
+                Add a payment method to start tracking subscriptions
+              </p>
             </div>
           ) : (
             paymentMethods.map((method) => (
@@ -241,17 +285,19 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium text-white">{method.name}</h4>
-                        {method.isDefault && (
-                          <span className="badge badge-teal">Default</span>
-                        )}
+                        {method.isDefault && <span className="badge badge-teal">Default</span>}
                       </div>
                       <div className="flex gap-4 text-sm text-secondary">
                         <span>{paymentTypeLabels[method.type]}</span>
-                        {method.lastFourDigits && (
-                          <span>****{method.lastFourDigits}</span>
-                        )}
+                        {method.lastFourDigits && <span>****{method.lastFourDigits}</span>}
                         {method.expiryDate && (
-                          <span>Exp: {new Date(method.expiryDate).toLocaleDateString('en-US', { year: '2-digit', month: '2-digit' })}</span>
+                          <span>
+                            Exp:{" "}
+                            {new Date(method.expiryDate).toLocaleDateString("en-US", {
+                              year: "2-digit",
+                              month: "2-digit",
+                            })}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -259,10 +305,7 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
 
                   <div className="flex items-center gap-2">
                     {!method.isDefault && (
-                      <button
-                        onClick={() => handleSetDefault(method._id)}
-                        className="btn-ghost"
-                      >
+                      <button onClick={() => handleSetDefault(method._id)} className="btn-ghost">
                         Set Default
                       </button>
                     )}

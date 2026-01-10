@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { useSubscriptionMutations, type UnifiedPaymentMethod } from "../lib/useSubscriptionData";
 import type { BillingCycle } from "../lib/guestDb";
+import { type UnifiedPaymentMethod, useSubscriptionMutations } from "../lib/useSubscriptionData";
 
 interface AddSubscriptionFormProps {
   paymentMethods: UnifiedPaymentMethod[];
@@ -81,9 +81,18 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
   };
 
   const categories = [
-    "Entertainment", "Software", "Cloud Services", "News & Media",
-    "Fitness", "Food & Delivery", "Transportation", "Education",
-    "Finance", "Productivity", "Gaming", "Other"
+    "Entertainment",
+    "Software",
+    "Cloud Services",
+    "News & Media",
+    "Fitness",
+    "Food & Delivery",
+    "Transportation",
+    "Education",
+    "Finance",
+    "Productivity",
+    "Gaming",
+    "Other",
   ];
 
   if (!isOpen) {
@@ -92,7 +101,12 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
         onClick={() => setIsOpen(true)}
         className="w-full py-4 px-6 glass-card flex items-center justify-center gap-3 text-primary font-medium hover:border-primary/30 transition-all group"
       >
-        <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-5 h-5 transition-transform group-hover:scale-110"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
         Add New Subscription
@@ -109,7 +123,12 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
           className="w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:text-white hover:bg-white/5 transition-all"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
@@ -142,7 +161,9 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
             >
               <option value="">Select category</option>
               {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
               ))}
             </select>
           </div>
@@ -163,9 +184,7 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-secondary mb-2">
-              Currency
-            </label>
+            <label className="block text-sm font-medium text-secondary mb-2">Currency</label>
             <select
               value={formData.currency}
               onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
@@ -216,9 +235,7 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-secondary mb-2">
-            Website
-          </label>
+          <label className="block text-sm font-medium text-secondary mb-2">Website</label>
           <input
             type="url"
             value={formData.website}
@@ -229,9 +246,7 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-secondary mb-2">
-            Description
-          </label>
+          <label className="block text-sm font-medium text-secondary mb-2">Description</label>
           <input
             type="text"
             value={formData.description}
@@ -242,9 +257,7 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-secondary mb-2">
-            Notes
-          </label>
+          <label className="block text-sm font-medium text-secondary mb-2">Notes</label>
           <textarea
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -258,11 +271,7 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
           <button type="submit" className="btn-primary flex-1">
             Add Subscription
           </button>
-          <button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            className="btn-secondary"
-          >
+          <button type="button" onClick={() => setIsOpen(false)} className="btn-secondary">
             Cancel
           </button>
         </div>

@@ -19,10 +19,10 @@ function getLocale(language: Language): string {
 export function formatCurrency(
   amount: number,
   currency: string,
-  language: Language = "en"
+  language: Language = "en",
 ): string {
   const locale = getLocale(language);
-  
+
   try {
     return new Intl.NumberFormat(locale, {
       style: "currency",
@@ -42,37 +42,34 @@ export function formatCurrency(
 export function formatDate(
   date: Date | number,
   language: Language = "en",
-  options: Intl.DateTimeFormatOptions = {}
+  options: Intl.DateTimeFormatOptions = {},
 ): string {
   const locale = getLocale(language);
   const dateObj = typeof date === "number" ? new Date(date) : date;
-  
+
   const defaultOptions: Intl.DateTimeFormatOptions = {
     year: "numeric",
     month: "short",
     day: "numeric",
     ...options,
   };
-  
+
   return new Intl.DateTimeFormat(locale, defaultOptions).format(dateObj);
 }
 
 /**
  * Format a relative date (e.g., "in 3 days", "2 hours ago")
  */
-export function formatRelativeDate(
-  date: Date | number,
-  language: Language = "en"
-): string {
+export function formatRelativeDate(date: Date | number, language: Language = "en"): string {
   const locale = getLocale(language);
   const dateObj = typeof date === "number" ? new Date(date) : date;
   const now = new Date();
   const diffMs = dateObj.getTime() - now.getTime();
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-  
+
   try {
     const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-    
+
     if (Math.abs(diffDays) < 1) {
       const diffHours = Math.round(diffMs / (1000 * 60 * 60));
       if (Math.abs(diffHours) < 1) {
@@ -81,16 +78,16 @@ export function formatRelativeDate(
       }
       return rtf.format(diffHours, "hour");
     }
-    
+
     if (Math.abs(diffDays) < 30) {
       return rtf.format(diffDays, "day");
     }
-    
+
     if (Math.abs(diffDays) < 365) {
       const diffMonths = Math.round(diffDays / 30);
       return rtf.format(diffMonths, "month");
     }
-    
+
     const diffYears = Math.round(diffDays / 365);
     return rtf.format(diffYears, "year");
   } catch {
@@ -109,7 +106,7 @@ export function formatRelativeDate(
 export function formatNumber(
   value: number,
   language: Language = "en",
-  options: Intl.NumberFormatOptions = {}
+  options: Intl.NumberFormatOptions = {},
 ): string {
   const locale = getLocale(language);
   return new Intl.NumberFormat(locale, options).format(value);
@@ -121,7 +118,7 @@ export function formatNumber(
 export function formatPercent(
   value: number,
   language: Language = "en",
-  decimals: number = 0
+  decimals: number = 0,
 ): string {
   const locale = getLocale(language);
   return new Intl.NumberFormat(locale, {
@@ -130,4 +127,3 @@ export function formatPercent(
     maximumFractionDigits: decimals,
   }).format(value);
 }
-

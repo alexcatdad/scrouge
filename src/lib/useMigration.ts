@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { useGuestMode } from "./guestMode";
-import { guestDb } from "./guestDb";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { api } from "../../convex/_generated/api";
+import { guestDb } from "./guestDb";
+import { useGuestMode } from "./guestMode";
 
 /**
  * Hook to handle migration of guest data when user authenticates.
@@ -77,7 +77,7 @@ export function useMigration(isAuthenticated: boolean) {
         localStorage.removeItem("scrouge_guest_mode");
 
         toast.success(
-          `Welcome! Migrated ${result.migratedPaymentMethods} payment methods and ${result.migratedSubscriptions} subscriptions.`
+          `Welcome! Migrated ${result.migratedPaymentMethods} payment methods and ${result.migratedSubscriptions} subscriptions.`,
         );
       } catch (error) {
         console.error("Migration failed:", error);
@@ -93,4 +93,3 @@ export function useMigration(isAuthenticated: boolean) {
 
   return { isMigrating };
 }
-
