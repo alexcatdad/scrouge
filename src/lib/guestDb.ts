@@ -59,11 +59,22 @@ export class GuestDB extends Dexie {
     });
   }
 
-  // Clear all guest data (used after migration)
+  /**
+   * Clear all guest data from tables (used after migration)
+   * For complete cleanup, also call deleteDatabase()
+   */
   async clearAllData(): Promise<void> {
     await this.subscriptions.clear();
     await this.paymentMethods.clear();
     await this.chatMessages.clear();
+  }
+
+  /**
+   * Completely delete the database (used for full cleanup after migration)
+   * More thorough than clearAllData - removes the entire IndexedDB
+   */
+  async deleteDatabase(): Promise<void> {
+    await this.delete();
   }
 
   // Check if there's any guest data

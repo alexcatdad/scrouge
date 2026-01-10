@@ -61,6 +61,7 @@ serverLogger.info("Server configuration", {
 /**
  * Security headers for all responses
  * These headers protect against common web vulnerabilities
+ * Following OWASP 2025+ recommendations
  */
 const getSecurityHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {
@@ -68,33 +69,54 @@ const getSecurityHeaders = (): Record<string, string> => {
     "X-Frame-Options": "DENY",
     // Prevent MIME type sniffing
     "X-Content-Type-Options": "nosniff",
-    // Enable XSS filter in older browsers
-    "X-XSS-Protection": "1; mode=block",
-    // Control referrer information
+    // Control referrer information (strict for privacy)
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    // Restrict permissions/features
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    // Restrict permissions/features (comprehensive list)
+    "Permissions-Policy":
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
+    // Prevent DNS prefetching to external domains
+    "X-DNS-Prefetch-Control": "off",
+    // Note: Cache-Control is set per-file in getCacheControl(), not globally here
+    // Cross-Origin policies for isolation
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
   };
 
-  // Content Security Policy
-  // Note: VITE_CONVEX_URL is baked into the bundle at build time
-  // We allow connections to *.convex.cloud for flexibility
+  // Content Security Policy - strict mode for production
+  // Vite production builds don't need unsafe-inline for scripts
+  // Using strict-dynamic pattern with nonce would be ideal but requires SSR
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    // Scripts: In production Vite bundles everything, no inline needed
+    // For WebLLM/WASM we need blob: and wasm-unsafe-eval
+    "script-src 'self' 'wasm-unsafe-eval' blob:",
+    // Styles: Google Fonts requires 'unsafe-inline' for injected styles
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: blob:",
-    "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://fonts.googleapis.com https://fonts.gstatic.com",
+    // Fonts
+    "font-src 'self' https://fonts.gstatic.com data:",
+    // Images: data: for inline SVGs, blob: for generated images
+    "img-src 'self' data: blob: https:",
+    // Connections: Convex, fonts, and WebLLM model downloads
+    "connect-src 'self' https://*.convex.cloud wss://*.convex.cloud https://fonts.googleapis.com https://fonts.gstatic.com https://huggingface.co https://*.huggingface.co blob:",
+    // Workers for WebLLM
+    "worker-src 'self' blob:",
+    // Prevent framing
     "frame-ancestors 'none'",
+    // Restrict base URI
     "base-uri 'self'",
+    // Restrict form submissions
     "form-action 'self'",
+    // Upgrade HTTP to HTTPS
+    "upgrade-insecure-requests",
+    // Block mixed content
+    "block-all-mixed-content",
   ];
   headers["Content-Security-Policy"] = cspDirectives.join("; ");
 
   // HSTS - only in production (requires HTTPS)
+  // Using 2 years with preload for maximum security
   if (isProduction) {
-    headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload";
   }
 
   return headers;
@@ -102,13 +124,17 @@ const getSecurityHeaders = (): Record<string, string> => {
 
 /**
  * Add security headers to a response
+ * Preserves existing headers like Cache-Control that are set per-file
  */
 const addSecurityHeaders = (response: Response): Response => {
   const securityHeaders = getSecurityHeaders();
   const newHeaders = new Headers(response.headers);
 
   for (const [key, value] of Object.entries(securityHeaders)) {
-    newHeaders.set(key, value);
+    // Don't override existing headers that are intentionally set per-file
+    if (!newHeaders.has(key)) {
+      newHeaders.set(key, value);
+    }
   }
 
   return new Response(response.body, {

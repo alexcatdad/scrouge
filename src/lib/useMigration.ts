@@ -35,9 +35,10 @@ export function useMigration(isAuthenticated: boolean) {
         const { subscriptions, paymentMethods } = await getDataForMigration();
 
         if (paymentMethods.length === 0 && subscriptions.length === 0) {
-          // No data to migrate
-          await guestDb.clearAllData();
+          // No data to migrate - clean up anyway
+          await guestDb.deleteDatabase();
           localStorage.removeItem("scrouge_guest_mode");
+          localStorage.removeItem("scrouge_guest_data_backup");
           return;
         }
 
@@ -73,8 +74,11 @@ export function useMigration(isAuthenticated: boolean) {
         });
 
         // Clear local data after successful migration
-        await guestDb.clearAllData();
+        // Use deleteDatabase for complete cleanup to prevent stale data issues
+        await guestDb.deleteDatabase();
         localStorage.removeItem("scrouge_guest_mode");
+        // Clear any other guest-related localStorage keys
+        localStorage.removeItem("scrouge_guest_data_backup");
 
         toast.success(
           `Welcome! Migrated ${result.migratedPaymentMethods} payment methods and ${result.migratedSubscriptions} subscriptions.`,

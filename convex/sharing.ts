@@ -12,14 +12,20 @@ async function getLoggedInUser(ctx: any) {
   return userId;
 }
 
-// Generate a random token for invite links
+/**
+ * Generate a cryptographically secure random token for invite links.
+ * Uses Web Crypto API for secure randomness (not Math.random which is predictable).
+ * Returns a URL-safe base64 string of 32 bytes (43 characters).
+ */
 function generateToken(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < 32; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  // Convert to URL-safe base64 (no padding, replace + with -, / with _)
+  const base64 = btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+  return base64;
 }
 
 /**
