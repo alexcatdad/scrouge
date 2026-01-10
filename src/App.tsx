@@ -1,7 +1,9 @@
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
+import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
 import { api } from "../convex/_generated/api";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { InviteClaim } from "./components/InviteClaim";
 import { SubscriptionDashboard } from "./components/SubscriptionDashboard";
 import { GuestModeProvider, useGuestMode } from "./lib/guestMode";
 import { I18nProvider } from "./lib/i18n";
@@ -9,8 +11,87 @@ import { useMigration } from "./lib/useMigration";
 import { SignInForm } from "./SignInForm";
 import { SignOutButton } from "./SignOutButton";
 
+// Simple URL path parser for invite links
+function useInviteToken() {
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkPath = () => {
+      const path = window.location.pathname;
+      const match = path.match(/^\/invite\/([a-zA-Z0-9]+)$/);
+      setToken(match ? match[1] : null);
+    };
+
+    checkPath();
+    window.addEventListener("popstate", checkPath);
+    return () => window.removeEventListener("popstate", checkPath);
+  }, []);
+
+  const clearToken = () => {
+    window.history.pushState({}, "", "/");
+    setToken(null);
+  };
+
+  return { token, clearToken };
+}
+
 function AppContent() {
   const { isGuest, exitGuestMode } = useGuestMode();
+  const { token: inviteToken, clearToken: clearInviteToken } = useInviteToken();
+
+  // Show invite claim page if there's an invite token
+  if (inviteToken) {
+    return (
+      <div className="min-h-screen flex flex-col relative">
+        {/* Background layers */}
+        <div className="bg-pattern" />
+        <div className="bg-noise" />
+        <div className="bg-orb bg-orb-gold" />
+        <div className="bg-orb bg-orb-teal" />
+
+        {/* Header */}
+        <header className="header-nav">
+          <div className="max-w-7xl mx-auto h-16 flex justify-between items-center px-6">
+            <div className="header-logo">
+              <div className="header-logo-icon">
+                <svg
+                  className="w-4 h-4 text-[#0a0a0b]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <span className="header-logo-text">Scrouge</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Invite claim content */}
+        <main className="flex-1 relative z-10">
+          <InviteClaim token={inviteToken} onClose={clearInviteToken} />
+        </main>
+
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: "rgba(39, 39, 42, 0.95)",
+              border: "1px solid rgba(113, 113, 122, 0.2)",
+              color: "#fafafa",
+              backdropFilter: "blur(12px)",
+            },
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col relative">

@@ -1,6 +1,7 @@
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { httpRouter } from "convex/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
@@ -280,6 +281,29 @@ http.route({
       });
 
       return successResponse({ paymentMethods });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Internal server error";
+      return errorResponse(message, 500);
+    }
+  }),
+});
+
+// Invite link info endpoint (public - no auth required)
+http.route({
+  path: "/invite/{token}",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split("/");
+    const token = pathParts[pathParts.length - 1];
+
+    if (!token) {
+      return errorResponse("Missing token", 400);
+    }
+
+    try {
+      const inviteInfo = await ctx.runQuery(api.sharing.getInviteInfo, { token });
+      return successResponse(inviteInfo);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Internal server error";
       return errorResponse(message, 500);

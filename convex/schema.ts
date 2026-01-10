@@ -21,10 +21,38 @@ const applicationTables = {
     website: v.optional(v.string()),
     isActive: v.boolean(),
     notes: v.optional(v.string()),
+    // Family plan fields
+    maxSlots: v.optional(v.number()), // e.g., 5 for a family plan
   })
     .index("by_user", ["userId"])
     .index("by_user_and_active", ["userId", "isActive"])
     .index("by_next_billing", ["nextBillingDate"]),
+
+  // Subscription sharing - links subscriptions to beneficiaries
+  subscriptionShares: defineTable({
+    subscriptionId: v.id("subscriptions"),
+    // Either a real user or just a name (anonymous)
+    type: v.union(v.literal("user"), v.literal("anonymous")),
+    userId: v.optional(v.id("users")), // if type === "user"
+    name: v.optional(v.string()), // if type === "anonymous" (e.g., "Mom")
+    // Beneficiary preference
+    isHidden: v.boolean(), // beneficiary can hide from their list
+    createdAt: v.number(),
+  })
+    .index("by_subscription", ["subscriptionId"])
+    .index("by_user", ["userId"])
+    .index("by_user_and_hidden", ["userId", "isHidden"]),
+
+  // Invite links for sharing subscriptions
+  shareInvites: defineTable({
+    subscriptionId: v.id("subscriptions"),
+    token: v.string(),
+    expiresAt: v.number(),
+    claimedBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_subscription", ["subscriptionId"]),
 
   paymentMethods: defineTable({
     userId: v.id("users"),

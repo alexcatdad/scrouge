@@ -49,6 +49,7 @@ const subscriptionWithPaymentValidator = v.object({
   website: v.optional(v.string()),
   isActive: v.boolean(),
   notes: v.optional(v.string()),
+  maxSlots: v.optional(v.number()),
   paymentMethod: paymentMethodValidator,
 });
 
@@ -103,6 +104,7 @@ export const create = mutation({
     category: v.string(),
     website: v.optional(v.string()),
     notes: v.optional(v.string()),
+    maxSlots: v.optional(v.number()),
   },
   returns: v.id("subscriptions"),
   handler: async (ctx, args) => {
@@ -130,6 +132,7 @@ export const update = mutation({
     website: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
     notes: v.optional(v.string()),
+    maxSlots: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
