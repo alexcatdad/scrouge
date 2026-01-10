@@ -197,7 +197,12 @@ export function ShareManagement({
                       onClick={() => handleRemoveShare(share._id, share.userName || share.name)}
                       className="p-2 rounded-lg text-secondary hover:text-accent-coral hover:bg-white/5 transition-all"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -291,9 +296,7 @@ export function ShareManagement({
                     className="flex items-center justify-between p-3 rounded-lg bg-white/5"
                   >
                     <div>
-                      <p className="text-sm text-white font-mono">
-                        ...{invite.token.slice(-8)}
-                      </p>
+                      <p className="text-sm text-white font-mono">...{invite.token.slice(-8)}</p>
                       <p className="text-xs text-secondary">
                         Expires {new Date(invite.expiresAt).toLocaleDateString()}
                       </p>

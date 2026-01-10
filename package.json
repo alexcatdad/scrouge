@@ -22,7 +22,9 @@
     "commitlint": "commitlint --edit",
     "build:analyze": "vite build --mode production && echo 'Bundle stats written to bundle-stats.html'",
     "changeset": "changeset",
-    "version": "changeset version"
+    "changeset:status": "changeset status",
+    "version": "changeset version",
+    "release": "changeset version && changeset tag"
   },
   "dependencies": {
     "@ai-sdk/mistral": "^3.0.5",

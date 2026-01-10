@@ -53,7 +53,7 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
       await createSubscription({
         name: formData.name,
         description: formData.description || undefined,
-        cost: parseFloat(formData.cost),
+        cost: Number.parseFloat(formData.cost),
         currency: formData.currency,
         billingCycle: formData.billingCycle,
         nextBillingDate: now.getTime(),
@@ -61,7 +61,10 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
         category: formData.category,
         website: formData.website || undefined,
         notes: formData.notes || undefined,
-        maxSlots: formData.isFamilyPlan && formData.maxSlots ? parseInt(formData.maxSlots) : undefined,
+        maxSlots:
+          formData.isFamilyPlan && formData.maxSlots
+            ? Number.parseInt(formData.maxSlots)
+            : undefined,
       });
 
       toast.success("Subscription added successfully!");
@@ -244,7 +247,9 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
           <div className="flex items-center gap-3 mb-4">
             <button
               type="button"
-              onClick={() => setFormData({ ...formData, isFamilyPlan: !formData.isFamilyPlan, maxSlots: "" })}
+              onClick={() =>
+                setFormData({ ...formData, isFamilyPlan: !formData.isFamilyPlan, maxSlots: "" })
+              }
               className={`relative w-11 h-6 rounded-full transition-colors ${
                 formData.isFamilyPlan ? "bg-primary" : "bg-white/10"
               }`}
@@ -255,9 +260,7 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
                 }`}
               />
             </button>
-            <label className="text-sm font-medium text-secondary">
-              Family/Shared Plan
-            </label>
+            <label className="text-sm font-medium text-secondary">Family/Shared Plan</label>
           </div>
 
           {formData.isFamilyPlan && (
