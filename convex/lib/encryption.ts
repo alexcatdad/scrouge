@@ -40,7 +40,7 @@ interface EncryptionKey {
 async function parseKeyBytes(keyString: string): Promise<Uint8Array> {
   if (keyString.length === 64 && /^[a-fA-F0-9]+$/.test(keyString)) {
     // Hex string - convert to bytes
-    return new Uint8Array(keyString.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16)));
+    return new Uint8Array(keyString.match(/.{1,2}/g)!.map((byte) => Number.parseInt(byte, 16)));
   }
   // Derive a 32-byte key from the string using SHA-256
   const encoder = new TextEncoder();

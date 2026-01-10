@@ -9,14 +9,14 @@
   "files": {
     "includes": [
       "**",
-      "!**/dist/**",
-      "!**/convex/_generated/**",
-      "!**/node_modules/**",
-      "!**/playwright-report/**",
-      "!**/test-results/**",
+      "!**/dist",
+      "!**/convex/_generated",
+      "!**/node_modules",
+      "!**/playwright-report",
+      "!**/test-results",
       "!**/*.css",
-      "!**/coverage/**",
-      "!**/.changeset/**"
+      "!**/coverage",
+      "!**/.changeset"
     ]
   },
   "formatter": {

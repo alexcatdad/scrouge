@@ -208,6 +208,66 @@ docker compose up
 docker run -p 3000:3000 scrouge
 ```
 
+## 🔄 CI/CD Pipeline
+
+This project uses comprehensive CI/CD pipelines on both **GitHub Actions** and **Gitea Actions**.
+
+### Quality Checks (on every push and PR)
+
+- **Linting**: Biome for code quality and formatting
+- **Type Checking**: TypeScript strict mode validation
+- **Unit Tests**: Bun test runner
+- **Security Scanning**: Dependency audit and SAST with Semgrep
+- **E2E Tests**: Playwright tests on pull requests
+
+### Deployment Pipeline
+
+1. **Build**: Docker image built with multi-stage Dockerfile
+2. **Push**: Image pushed to container registry (GHCR or Gitea)
+3. **Deploy**: Zero-downtime deployment with health checks
+4. **Rollback**: Automatic rollback on health check failure
+
+### Versioning
+
+This project uses [Changesets](https://github.com/changesets/changesets) for version management:
+
+```bash
+# Create a new changeset for your changes
+bun run changeset
+
+# Check pending changesets
+bun run changeset:status
+
+# Version packages (usually done by CI)
+bun run version
+```
+
+**Commit Convention**: Uses [Conventional Commits](https://www.conventionalcommits.org/) validated by commitlint:
+- `feat:` - New features (minor version bump)
+- `fix:` - Bug fixes (patch version bump)
+- `docs:` - Documentation changes
+- `chore:` - Maintenance tasks
+- `ci:` - CI/CD changes
+
+### Dependency Management
+
+- **Renovate** (Gitea): Automated dependency updates with semantic grouping
+- **Dependabot** (GitHub): Security vulnerability alerts and updates
+- **Lock file maintenance**: Weekly lockfile updates
+
+### Required Secrets (CI/CD)
+
+Configure these in your repository settings:
+
+| Secret | Description |
+|--------|-------------|
+| `VITE_CONVEX_URL` | Convex deployment URL (build-time) |
+| `CONVEX_URL` | Convex runtime URL (deployment) |
+| `DEPLOY_HOST` | SSH deployment server hostname |
+| `DEPLOY_USER` | SSH username |
+| `DEPLOY_SSH_KEY` | SSH private key |
+| `REGISTRY_TOKEN` | Container registry token (Gitea only) |
+
 ## 🔒 Security & Privacy
 
 - **API Key Encryption**: User API keys are encrypted at rest using AES-256-GCM

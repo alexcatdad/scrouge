@@ -1,10 +1,10 @@
 import { useMutation, useQuery } from "convex/react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { useMemo } from "react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { type BillingCycle, guestDb } from "./guestDb";
 import { type LocalPaymentMethod, type LocalSubscription, useGuestMode } from "./guestMode";
-import { useMemo } from "react";
 
 // Unified subscription type that works for both guest and authenticated modes
 export interface UnifiedSubscription {
@@ -188,7 +188,15 @@ export function useSubscriptions(options?: {
     }
 
     return ownedSubs;
-  }, [isGuest, guestSubscriptions, guestPaymentMethods, convexSubscriptions, sharedSubscriptions, options?.activeOnly, options?.includeShared]);
+  }, [
+    isGuest,
+    guestSubscriptions,
+    guestPaymentMethods,
+    convexSubscriptions,
+    sharedSubscriptions,
+    options?.activeOnly,
+    options?.includeShared,
+  ]);
 }
 
 /**

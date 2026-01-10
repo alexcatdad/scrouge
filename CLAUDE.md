@@ -96,9 +96,11 @@ export const myQuery = query({
 - `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` - GitHub OAuth (optional)
 - `AUTH_AUTHENTIK_ID`, `AUTH_AUTHENTIK_SECRET`, `AUTH_AUTHENTIK_ISSUER` - Authentik OIDC (optional)
 
-## Deployment
+## CI/CD & Deployment
 
-The app is containerized with Docker and deployed via Gitea Actions.
+The app is containerized with Docker and supports CI/CD on both **GitHub Actions** and **Gitea Actions**.
+
+### Docker
 
 ```bash
 # Build Docker image locally (requires VITE_CONVEX_URL at build time)
@@ -111,6 +113,33 @@ docker compose up
 docker run -p 3000:3000 scrouge
 ```
 
-**CI/CD**: Push to `main` branch triggers `.gitea/workflows/deploy.yaml` which builds, pushes to Gitea Container Registry, and deploys via SSH.
+### CI/CD Workflows
 
-**Required Gitea Secrets**: `REGISTRY_TOKEN`, `VITE_CONVEX_URL`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
+| Workflow | Location | Purpose |
+|----------|----------|---------|
+| `ci.yaml` | `.github/workflows/` | Quality checks, security scanning, E2E tests, build |
+| `release.yaml` | `.github/workflows/` | Changesets version management, Git tagging |
+| `deploy.yaml` | `.github/workflows/` | Docker build & deploy to production (GHCR) |
+| `deploy.yaml` | `.gitea/workflows/` | Docker build & deploy to production (Gitea) |
+| `release.yaml` | `.gitea/workflows/` | Changesets version management |
+
+### Required Secrets
+
+| Secret | GitHub | Gitea | Description |
+|--------|--------|-------|-------------|
+| `VITE_CONVEX_URL` | Yes | Yes | Convex deployment URL (build-time) |
+| `CONVEX_URL` | Yes | Yes | Convex runtime URL (deployment) |
+| `DEPLOY_HOST` | Yes | Yes | SSH deployment server |
+| `DEPLOY_USER` | Yes | Yes | SSH username |
+| `DEPLOY_SSH_KEY` | Yes | Yes | SSH private key |
+| `REGISTRY_TOKEN` | No | Yes | Gitea Container Registry token |
+| `GITHUB_TOKEN` | Auto | No | Auto-provided by GitHub |
+
+### Versioning
+
+Uses Changesets for semantic versioning:
+```bash
+bun run changeset        # Create a changeset
+bun run changeset:status # Check pending changesets
+bun run version          # Apply version bumps
+```

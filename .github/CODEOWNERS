@@ -1,0 +1,28 @@
+# CODEOWNERS file for automatic review assignment
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @alexcatdad
+
+# Frontend/React components
+/src/ @alexcatdad
+
+# Backend/Convex functions
+/convex/ @alexcatdad
+
+# CI/CD and infrastructure
+/.github/ @alexcatdad
+/.gitea/ @alexcatdad
+/Dockerfile @alexcatdad
+/docker-compose.yml @alexcatdad
+
+# Security-sensitive files
+/convex/lib/encryption.ts @alexcatdad
+/convex/auth.ts @alexcatdad
+/convex/mcpApiKeys.ts @alexcatdad
+/audit-ci.json @alexcatdad
+
+# Configuration files
+/biome.json @alexcatdad
+/renovate.json @alexcatdad
+/.changeset/ @alexcatdad

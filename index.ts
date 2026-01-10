@@ -39,7 +39,7 @@ const serverEnv = createEnv({
   server: {
     PORT: z
       .string()
-      .transform((val) => parseInt(val, 10))
+      .transform((val) => Number.parseInt(val, 10))
       .pipe(z.number().min(1).max(65535))
       .default("3000"),
     NODE_ENV: z.enum(["development", "production", "test"]).default("production"),

@@ -167,7 +167,10 @@ export function InviteClaim({ token, onClose }: InviteClaimProps) {
         </div>
 
         <div className="px-6 py-4 border-t border-[rgba(113,113,122,0.15)] bg-white/[0.02]">
-          <button onClick={onClose} className="text-secondary hover:text-white text-sm transition-colors">
+          <button
+            onClick={onClose}
+            className="text-secondary hover:text-white text-sm transition-colors"
+          >
             Cancel and go to dashboard
           </button>
         </div>

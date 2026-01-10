@@ -1,88 +1,87 @@
-name: CI/CD Pipeline
+name: Deploy
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
 
 env:
-  REGISTRY: ${{ gitea.server_url }}
-  IMAGE_NAME: ${{ gitea.repository }}
-  # Container name for deployment
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
   CONTAINER_NAME: scrouge
 
 jobs:
-  # ============================================
-  # Quality Gate: Lint, Type Check, and Test
-  # ============================================
-  quality:
-    name: Quality Checks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Run Biome lint and format check
-        run: bun run lint
-
-      - name: Type check
-        run: bun run typecheck
-
-      - name: Run unit tests
-        run: bun test tests/
-
-      - name: Security audit
-        run: bunx audit-ci --config audit-ci.json
-        continue-on-error: true
-
   # ============================================
   # Build Docker Image
   # ============================================
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
-    needs: quality
-    # Only build on main branch pushes, not PRs
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
     outputs:
       image_tag: ${{ steps.meta.outputs.tag }}
+      image_digest: ${{ steps.build.outputs.digest }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Generate image metadata
         id: meta
         run: |
-          SHORT_SHA=$(echo "${{ gitea.sha }}" | cut -c1-7)
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "tag=${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "full_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${SHORT_SHA}" >> $GITHUB_OUTPUT
 
-      - name: Login to Container Registry
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ gitea.actor }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        run: |
-          # Build with all required build args
-          docker build \
-            --build-arg VITE_CONVEX_URL=${{ secrets.VITE_CONVEX_URL }} \
-            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }} \
-            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            .
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          build-args: |
+            VITE_CONVEX_URL=${{ secrets.VITE_CONVEX_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
 
-          # Push both tags
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+          retention-days: 90
 
   # ============================================
   # Deploy with Health Checks and Rollback
@@ -110,8 +109,8 @@ jobs:
 
             echo "=== Deploying ${IMAGE}:${TAG} ==="
 
-            # Login to registry (use stdin to avoid password in logs)
-            echo "${{ secrets.REGISTRY_TOKEN }}" | docker login ${REGISTRY} -u ${{ gitea.actor }} --password-stdin
+            # Login to registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${REGISTRY} -u ${{ github.actor }} --password-stdin
 
             # Pull new image
             docker pull ${IMAGE}:${TAG}
@@ -151,7 +150,6 @@ jobs:
 
               if [ "${HEALTH}" = "healthy" ]; then
                 echo "=== Container is healthy! ==="
-                # Remove backup container
                 docker rm ${BACKUP_CONTAINER} 2>/dev/null || true
                 echo "=== Deployment successful ==="
                 exit 0
@@ -185,13 +183,13 @@ jobs:
         if: always()
         run: |
           if [ "${{ job.status }}" = "success" ]; then
-            echo "Deployment successful: ${{ needs.build.outputs.image_tag }}"
+            echo "::notice::Deployment successful: ${{ needs.build.outputs.image_tag }}"
           else
-            echo "Deployment failed or rolled back"
+            echo "::error::Deployment failed or rolled back"
           fi
 
   # ============================================
-  # Cleanup old images (weekly)
+  # Cleanup old images
   # ============================================
   cleanup:
     name: Cleanup Old Images
@@ -215,3 +213,11 @@ jobs:
 
             # Prune unused images
             docker image prune -f
+
+      - name: Delete old container images from GHCR
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ github.event.repository.name }}
+          package-type: container
+          min-versions-to-keep: 5
+          delete-only-untagged-versions: true
