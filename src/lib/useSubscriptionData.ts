@@ -399,7 +399,7 @@ export function useSubscriptionMutations() {
         const updateData: any = { ...data };
         if (data.paymentMethodId) {
           updateData.paymentMethodLocalId = data.paymentMethodId;
-          delete updateData.paymentMethodId;
+          updateData.paymentMethodId = undefined;
         }
         return updateSubscription(id, updateData);
       }

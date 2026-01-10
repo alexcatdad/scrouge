@@ -92,7 +92,7 @@ describe("Monitoring Utility", () => {
     // Should not throw
     await initMonitoring();
 
-    delete (globalThis as any).window;
+    (globalThis as any).window = undefined;
   });
 
   test("startTransaction returns a finish function", async () => {
@@ -151,7 +151,7 @@ describe("MonitoringConfig", () => {
     // Should not throw with no arguments
     await initMonitoring();
 
-    delete (globalThis as any).window;
+    (globalThis as any).window = undefined;
   });
 });
 

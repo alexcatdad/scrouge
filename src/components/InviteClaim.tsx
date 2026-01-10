@@ -26,9 +26,8 @@ export function InviteClaim({ token, onClose }: InviteClaimProps) {
       } else {
         toast.error(result.reason);
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to claim invite");
-      console.error(error);
     } finally {
       setIsClaiming(false);
     }

@@ -15,7 +15,7 @@ describe("Encryption Module", () => {
     if (originalEnv !== undefined) {
       process.env.AI_ENCRYPTION_KEY = originalEnv;
     } else {
-      delete process.env.AI_ENCRYPTION_KEY;
+      process.env.AI_ENCRYPTION_KEY = undefined;
     }
   });
 
@@ -94,7 +94,7 @@ describe("Encryption Module", () => {
   });
 
   test("throws error when encryption key is not set", async () => {
-    delete process.env.AI_ENCRYPTION_KEY;
+    process.env.AI_ENCRYPTION_KEY = undefined;
 
     // Need to re-import to get fresh module state
     // In practice, this would fail at runtime

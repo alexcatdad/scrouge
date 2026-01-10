@@ -40,7 +40,11 @@ interface EncryptionKey {
 async function parseKeyBytes(keyString: string): Promise<Uint8Array> {
   if (keyString.length === 64 && /^[a-fA-F0-9]+$/.test(keyString)) {
     // Hex string - convert to bytes
-    return new Uint8Array(keyString.match(/.{1,2}/g)!.map((byte) => Number.parseInt(byte, 16)));
+    const hexPairs = keyString.match(/.{1,2}/g);
+    if (!hexPairs) {
+      throw new Error("Invalid hex key format");
+    }
+    return new Uint8Array(hexPairs.map((byte) => Number.parseInt(byte, 16)));
   }
   // Derive a 32-byte key from the string using SHA-256
   const encoder = new TextEncoder();
@@ -185,10 +189,10 @@ export async function decrypt(encrypted: string): Promise<string> {
   const decrypted = await crypto.subtle.decrypt(
     {
       name: ALGORITHM,
-      iv: iv,
+      iv: iv as BufferSource,
     },
     key,
-    ciphertext,
+    ciphertext as BufferSource,
   );
 
   const decoder = new TextDecoder();

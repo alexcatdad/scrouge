@@ -43,9 +43,8 @@ export function PaymentMethodManager({ paymentMethods }: PaymentMethodManagerPro
         expiryDate: "",
         isDefault: false,
       });
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to add payment method");
-      console.error(error);
     }
   };
 

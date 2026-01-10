@@ -1,7 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 
 // Helper to get authenticated user
 async function getLoggedInUser(ctx: any) {
@@ -95,6 +94,65 @@ export const createInviteLink = mutation({
  * Get invite info by token (for preview before claiming)
  */
 export const getInviteInfo = query({
+  args: { token: v.string() },
+  returns: v.union(
+    v.object({
+      valid: v.literal(true),
+      subscriptionName: v.string(),
+      ownerName: v.optional(v.string()),
+      cost: v.number(),
+      currency: v.string(),
+      billingCycle: v.string(),
+      maxSlots: v.optional(v.number()),
+      expiresAt: v.number(),
+    }),
+    v.object({
+      valid: v.literal(false),
+      reason: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const invite = await ctx.db
+      .query("shareInvites")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .first();
+
+    if (!invite) {
+      return { valid: false as const, reason: "Invite not found" };
+    }
+
+    if (invite.claimedBy) {
+      return { valid: false as const, reason: "Invite already claimed" };
+    }
+
+    if (invite.expiresAt < Date.now()) {
+      return { valid: false as const, reason: "Invite expired" };
+    }
+
+    const subscription = await ctx.db.get(invite.subscriptionId);
+    if (!subscription) {
+      return { valid: false as const, reason: "Subscription no longer exists" };
+    }
+
+    const owner = await ctx.db.get(subscription.userId);
+
+    return {
+      valid: true as const,
+      subscriptionName: subscription.name,
+      ownerName: owner?.name,
+      cost: subscription.cost,
+      currency: subscription.currency,
+      billingCycle: subscription.billingCycle,
+      maxSlots: subscription.maxSlots,
+      expiresAt: invite.expiresAt,
+    };
+  },
+});
+
+/**
+ * Internal version of getInviteInfo for HTTP routes
+ */
+export const getInviteInfoInternal = internalQuery({
   args: { token: v.string() },
   returns: v.union(
     v.object({

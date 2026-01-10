@@ -63,7 +63,7 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
         notes: formData.notes || undefined,
         maxSlots:
           formData.isFamilyPlan && formData.maxSlots
-            ? Number.parseInt(formData.maxSlots)
+            ? Number.parseInt(formData.maxSlots, 10)
             : undefined,
       });
 
@@ -82,9 +82,8 @@ export function AddSubscriptionForm({ paymentMethods }: AddSubscriptionFormProps
         isFamilyPlan: false,
         maxSlots: "",
       });
-    } catch (error) {
+    } catch (_error) {
       toast.error("Failed to add subscription");
-      console.error(error);
     }
   };
 

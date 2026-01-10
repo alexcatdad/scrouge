@@ -32,10 +32,7 @@ test.describe("MCP API Key Management", () => {
  * These tests verify that MCP endpoints require proper authentication
  */
 test.describe("MCP Endpoint Security", () => {
-  test("should return 401 for unauthenticated requests to subscriptions", async ({
-    request,
-    baseURL,
-  }) => {
+  test("should return 401 for unauthenticated requests to subscriptions", async ({ request }) => {
     // Note: MCP endpoints are on Convex, not the local server
     // This test verifies the local server doesn't expose MCP endpoints
     const response = await request.get("/mcp/subscriptions");

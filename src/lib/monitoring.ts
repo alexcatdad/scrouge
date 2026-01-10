@@ -27,21 +27,16 @@ export async function initMonitoring(): Promise<void> {
 /**
  * Report an error to the console
  */
-export function captureError(error: Error, context?: ErrorContext): void {
-  // Always log to console
-  console.error("[Error]", error, context);
-}
+export function captureError(_error: Error, _context?: ErrorContext): void {}
 
 /**
  * Report a message to the console
  */
 export function captureMessage(
-  message: string,
-  level: "info" | "warning" | "error" = "info",
-  context?: ErrorContext,
-): void {
-  console.log(`[${level.toUpperCase()}]`, message, context);
-}
+  _message: string,
+  _level: "info" | "warning" | "error" = "info",
+  _context?: ErrorContext,
+): void {}
 
 /**
  * Set user context for error tracking (no-op, kept for API compatibility)
