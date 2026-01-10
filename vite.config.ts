@@ -31,8 +31,8 @@ export default defineConfig(({ mode }) => ({
         manualChunks: {
           // React core
           react: ["react", "react-dom"],
-          // Convex runtime
-          convex: ["convex", "convex/react", "@convex-dev/auth"],
+          // Convex runtime (excluding @convex-dev/auth which has export resolution issues)
+          convex: ["convex", "convex/react"],
           // AI SDKs (loaded on demand)
           ai: ["ai", "@ai-sdk/openai", "@ai-sdk/xai", "@ai-sdk/mistral"],
           // IndexedDB for offline support
