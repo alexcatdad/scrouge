@@ -3,6 +3,8 @@ import { generateText, tool } from "ai";
 import { v } from "convex/values";
 import { z } from "zod";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { action, mutation, query } from "./_generated/server";
 import { getModel } from "./lib/aiProvider";
 
@@ -20,7 +22,42 @@ const toolResultValidator = v.object({
   subscriptionId: v.optional(v.id("subscriptions")),
 });
 
-async function getLoggedInUser(ctx: any) {
+// Tool parameter types (matching zod schemas)
+interface AddSubscriptionParams {
+  name: string;
+  cost: number;
+  currency?: string;
+  billingCycle: "monthly" | "yearly" | "weekly" | "daily";
+  paymentMethodId?: string;
+  category?: string;
+  website?: string;
+  description?: string;
+  notes?: string;
+}
+
+interface UpdateSubscriptionParams {
+  subscriptionId: string;
+  name?: string;
+  cost?: number;
+  billingCycle?: "monthly" | "yearly" | "weekly" | "daily";
+  isActive?: boolean;
+}
+
+interface CancelSubscriptionParams {
+  subscriptionId: string;
+}
+
+// Tool result type
+interface ToolResult {
+  success: boolean;
+  message: string;
+  subscriptionId?: Id<"subscriptions">;
+}
+
+// Context types for auth
+type AuthContext = ActionCtx | MutationCtx | QueryCtx;
+
+async function getLoggedInUser(ctx: AuthContext): Promise<Id<"users">> {
   const userId = await getAuthUserId(ctx);
   if (!userId) {
     throw new Error("User not authenticated");
@@ -135,8 +172,7 @@ If they mention a service name, try to provide helpful information about typical
               description: z.string().optional().describe("Additional description"),
               notes: z.string().optional().describe("Any additional notes"),
             }),
-            // @ts-expect-error - Tool execute function types are inferred from parameters schema
-            execute: async (params) => {
+            execute: async (params: AddSubscriptionParams): Promise<ToolResult> => {
               // Calculate next billing date based on billing cycle
               const now = Date.now();
               let nextBillingDate = now;
@@ -160,7 +196,7 @@ If they mention a service name, try to provide helpful information about typical
               // Get default payment method if not specified
               let paymentMethodId = params.paymentMethodId;
               if (!paymentMethodId && paymentMethods.length > 0) {
-                const defaultMethod = paymentMethods.find((pm: any) => pm.isDefault);
+                const defaultMethod = paymentMethods.find((pm) => pm.isDefault);
                 paymentMethodId = defaultMethod?._id || paymentMethods[0]._id;
               }
 
@@ -181,7 +217,7 @@ If they mention a service name, try to provide helpful information about typical
                     currency: params.currency || "USD",
                     billingCycle: params.billingCycle,
                     nextBillingDate,
-                    paymentMethodId: paymentMethodId as any,
+                    paymentMethodId: paymentMethodId as Id<"paymentMethods">,
                     category: params.category || "Other",
                     website: params.website,
                     description: params.description,
@@ -194,10 +230,11 @@ If they mention a service name, try to provide helpful information about typical
                   message: `Successfully added ${params.name} subscription ($${params.cost}/${params.billingCycle})`,
                   subscriptionId,
                 };
-              } catch (error: any) {
+              } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : "Unknown error";
                 return {
                   success: false,
-                  message: `Failed to add subscription: ${error.message}`,
+                  message: `Failed to add subscription: ${message}`,
                 };
               }
             },
@@ -214,11 +251,10 @@ If they mention a service name, try to provide helpful information about typical
                 .describe("New billing cycle"),
               isActive: z.boolean().optional().describe("Whether subscription is active"),
             }),
-            // @ts-expect-error - Tool execute function types are inferred from parameters schema
-            execute: async (params) => {
+            execute: async (params: UpdateSubscriptionParams): Promise<ToolResult> => {
               try {
                 await ctx.runMutation(internal.subscriptions.updateInternal, {
-                  id: params.subscriptionId as any,
+                  id: params.subscriptionId as Id<"subscriptions">,
                   userId,
                   name: params.name,
                   cost: params.cost,
@@ -229,10 +265,11 @@ If they mention a service name, try to provide helpful information about typical
                   success: true,
                   message: "Subscription updated successfully",
                 };
-              } catch (error: any) {
+              } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : "Unknown error";
                 return {
                   success: false,
-                  message: `Failed to update subscription: ${error.message}`,
+                  message: `Failed to update subscription: ${message}`,
                 };
               }
             },
@@ -242,11 +279,10 @@ If they mention a service name, try to provide helpful information about typical
             parameters: z.object({
               subscriptionId: z.string().describe("ID of the subscription to cancel"),
             }),
-            // @ts-expect-error - Tool execute function types are inferred from parameters schema
-            execute: async (params) => {
+            execute: async (params: CancelSubscriptionParams): Promise<ToolResult> => {
               try {
                 await ctx.runMutation(internal.subscriptions.updateInternal, {
-                  id: params.subscriptionId as any,
+                  id: params.subscriptionId as Id<"subscriptions">,
                   userId,
                   isActive: false,
                 });
@@ -254,10 +290,11 @@ If they mention a service name, try to provide helpful information about typical
                   success: true,
                   message: "Subscription cancelled successfully",
                 };
-              } catch (error: any) {
+              } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : "Unknown error";
                 return {
                   success: false,
-                  message: `Failed to cancel subscription: ${error.message}`,
+                  message: `Failed to cancel subscription: ${message}`,
                 };
               }
             },
@@ -266,8 +303,9 @@ If they mention a service name, try to provide helpful information about typical
       });
 
       return result.text;
-    } catch (error: any) {
-      return `I'm sorry, I encountered an error processing your request: ${error.message}. Please try again.`;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return `I'm sorry, I encountered an error processing your request: ${message}. Please try again.`;
     }
   },
 });
@@ -384,7 +422,7 @@ export const executeLocalToolCall = mutation({
             currency: toolArgs.currency || "USD",
             billingCycle: toolArgs.billingCycle,
             nextBillingDate,
-            paymentMethodId: paymentMethodId as any,
+            paymentMethodId: paymentMethodId as Id<"paymentMethods">,
             category: toolArgs.category || "Other",
             website: toolArgs.website,
             description: toolArgs.description,
@@ -425,7 +463,13 @@ export const executeLocalToolCall = mutation({
         }
 
         try {
-          const updates: Record<string, any> = {};
+          // Build updates object with proper typing
+          const updates: Partial<{
+            name: string;
+            cost: number;
+            billingCycle: "monthly" | "yearly" | "weekly" | "daily";
+            isActive: boolean;
+          }> = {};
           if (toolArgs.name !== undefined) updates.name = toolArgs.name;
           if (toolArgs.cost !== undefined) updates.cost = toolArgs.cost;
           if (toolArgs.billingCycle !== undefined) updates.billingCycle = toolArgs.billingCycle;

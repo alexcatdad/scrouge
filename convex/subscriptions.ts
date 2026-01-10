@@ -110,6 +110,15 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const userId = await getLoggedInUser(ctx);
 
+    // Validate foreign key: payment method must exist and belong to user
+    const paymentMethod = await ctx.db.get(args.paymentMethodId);
+    if (!paymentMethod) {
+      throw new Error("Payment method not found");
+    }
+    if (paymentMethod.userId !== userId) {
+      throw new Error("Payment method does not belong to this user");
+    }
+
     return await ctx.db.insert("subscriptions", {
       userId,
       ...args,
@@ -144,6 +153,17 @@ export const update = mutation({
       throw new Error("Subscription not found or access denied");
     }
 
+    // Validate foreign key if payment method is being changed
+    if (updates.paymentMethodId) {
+      const paymentMethod = await ctx.db.get(updates.paymentMethodId);
+      if (!paymentMethod) {
+        throw new Error("Payment method not found");
+      }
+      if (paymentMethod.userId !== userId) {
+        throw new Error("Payment method does not belong to this user");
+      }
+    }
+
     await ctx.db.patch(id, updates);
     return null;
   },
@@ -160,6 +180,27 @@ export const remove = mutation({
       throw new Error("Subscription not found or access denied");
     }
 
+    // CASCADE DELETE: Remove all related shares
+    const shares = await ctx.db
+      .query("subscriptionShares")
+      .withIndex("by_subscription", (q) => q.eq("subscriptionId", args.id))
+      .collect();
+
+    for (const share of shares) {
+      await ctx.db.delete(share._id);
+    }
+
+    // CASCADE DELETE: Remove all related invite links
+    const invites = await ctx.db
+      .query("shareInvites")
+      .withIndex("by_subscription", (q) => q.eq("subscriptionId", args.id))
+      .collect();
+
+    for (const invite of invites) {
+      await ctx.db.delete(invite._id);
+    }
+
+    // Finally delete the subscription itself
     await ctx.db.delete(args.id);
     return null;
   },

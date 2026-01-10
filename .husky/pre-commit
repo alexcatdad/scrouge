@@ -1,0 +1,4 @@
+#!/bin/sh
+# Pre-commit hook: Run lint-staged on staged files
+
+bunx lint-staged

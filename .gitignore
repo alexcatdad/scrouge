@@ -37,3 +37,9 @@ bun.lockb
 # Test reports and results
 playwright-report/
 test-results/
+
+# Bundle analysis
+bundle-stats.html
+
+# Coverage
+coverage/

@@ -1,0 +1,430 @@
+openapi: 3.1.0
+info:
+  title: Scrouge API
+  description: |
+    API for the Scrouge subscription tracking application.
+
+    ## Authentication
+
+    Most endpoints require authentication using a Bearer token (MCP API key).
+    Get your API key from the Settings > MCP API Keys section in the app.
+
+    ```
+    Authorization: Bearer <your-api-key>
+    ```
+
+    ## Rate Limiting
+
+    API requests are rate limited to 100 requests per minute.
+    Rate limit headers are included in responses:
+    - `X-RateLimit-Remaining`: Requests remaining in current window
+    - `X-RateLimit-Reset`: Unix timestamp when the limit resets
+    - `Retry-After`: Seconds until rate limit resets (only on 429 responses)
+
+  version: 0.1.0
+  contact:
+    name: Scrouge Support
+  license:
+    name: MIT
+
+servers:
+  - url: https://{convex-deployment}.convex.site
+    description: Convex deployment
+    variables:
+      convex-deployment:
+        default: your-deployment
+        description: Your Convex deployment ID
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Subscriptions
+    description: Subscription management endpoints
+  - name: Payment Methods
+    description: Payment method management endpoints
+  - name: Sharing
+    description: Subscription sharing endpoints
+
+paths:
+  /mcp/subscriptions:
+    get:
+      tags:
+        - Subscriptions
+      summary: List all subscriptions
+      description: Returns all subscriptions for the authenticated user
+      operationId: listSubscriptions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of subscriptions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscriptions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Subscription"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags:
+        - Subscriptions
+      summary: Create a subscription
+      description: Add a new subscription for the authenticated user
+      operationId: createSubscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subscription
+              properties:
+                subscription:
+                  $ref: "#/components/schemas/SubscriptionInput"
+      responses:
+        "200":
+          description: Subscription created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  subscriptionId:
+                    type: string
+                    description: Convex ID of the created subscription
+                  message:
+                    type: string
+                    example: Subscription added successfully
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /mcp/payment-methods:
+    get:
+      tags:
+        - Payment Methods
+      summary: List all payment methods
+      description: Returns all payment methods for the authenticated user
+      operationId: listPaymentMethods
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of payment methods
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paymentMethods:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PaymentMethod"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /invite/{token}:
+    get:
+      tags:
+        - Sharing
+      summary: Get invite link info
+      description: |
+        Returns information about a subscription share invite.
+        This endpoint is public and does not require authentication.
+      operationId: getInviteInfo
+      security: [] # No auth required
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: The invite token from the share link
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invite information
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidInvite"
+                  - $ref: "#/components/schemas/InvalidInvite"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: MCP API key from Settings > MCP API Keys
+
+  schemas:
+    Subscription:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Convex document ID
+        _creationTime:
+          type: number
+          description: Unix timestamp when created
+        userId:
+          type: string
+          description: User ID who owns this subscription
+        name:
+          type: string
+          description: Subscription name (e.g., "Netflix", "Spotify")
+          example: Netflix
+        description:
+          type: string
+          nullable: true
+          description: Optional description
+        cost:
+          type: number
+          description: Cost per billing cycle
+          example: 15.99
+        currency:
+          type: string
+          description: ISO 4217 currency code
+          example: USD
+        billingCycle:
+          type: string
+          enum: [monthly, yearly, weekly, daily]
+          description: How often the subscription is billed
+          example: monthly
+        nextBillingDate:
+          type: number
+          description: Unix timestamp of next billing date
+        paymentMethodId:
+          type: string
+          description: ID of the payment method used
+        category:
+          type: string
+          description: Category for organization
+          example: Entertainment
+        website:
+          type: string
+          nullable: true
+          description: Service website URL
+          example: https://netflix.com
+        isActive:
+          type: boolean
+          description: Whether subscription is currently active
+        notes:
+          type: string
+          nullable: true
+          description: Optional notes
+        maxSlots:
+          type: integer
+          nullable: true
+          description: Maximum slots for family/shared plans
+          example: 5
+        paymentMethod:
+          oneOf:
+            - $ref: "#/components/schemas/PaymentMethod"
+            - type: "null"
+
+    SubscriptionInput:
+      type: object
+      required:
+        - name
+        - cost
+        - currency
+        - billingCycle
+        - paymentMethodId
+        - category
+      properties:
+        name:
+          type: string
+          description: Subscription name
+          example: Spotify Premium
+        description:
+          type: string
+          description: Optional description
+        cost:
+          type: number
+          description: Cost per billing cycle
+          example: 9.99
+        currency:
+          type: string
+          description: ISO 4217 currency code
+          example: USD
+        billingCycle:
+          type: string
+          enum: [monthly, yearly, weekly, daily]
+          example: monthly
+        nextBillingDate:
+          type: number
+          description: Unix timestamp (calculated if not provided)
+        paymentMethodId:
+          type: string
+          description: ID of the payment method to use
+        category:
+          type: string
+          example: Music
+        website:
+          type: string
+          example: https://spotify.com
+        notes:
+          type: string
+
+    PaymentMethod:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Convex document ID
+        _creationTime:
+          type: number
+        userId:
+          type: string
+        name:
+          type: string
+          description: Display name for the payment method
+          example: Chase Visa
+        type:
+          type: string
+          enum: [credit_card, debit_card, bank_account, paypal, other]
+        lastFourDigits:
+          type: string
+          nullable: true
+          description: Last 4 digits of card/account
+          example: "4242"
+        expiryDate:
+          type: string
+          nullable: true
+          description: Card expiry date (MM/YY)
+          example: "12/25"
+        isDefault:
+          type: boolean
+          description: Whether this is the default payment method
+
+    ValidInvite:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          enum: [true]
+        subscriptionName:
+          type: string
+          example: Netflix Family
+        ownerName:
+          type: string
+          nullable: true
+        cost:
+          type: number
+          example: 22.99
+        currency:
+          type: string
+          example: USD
+        billingCycle:
+          type: string
+          example: monthly
+        maxSlots:
+          type: integer
+          nullable: true
+          example: 5
+        expiresAt:
+          type: number
+          description: Unix timestamp when invite expires
+
+    InvalidInvite:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          enum: [false]
+        reason:
+          type: string
+          description: Why the invite is invalid
+          example: Invite expired
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+
+  responses:
+    BadRequest:
+      description: Bad request - missing or invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: Missing required field
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Unauthorized: Invalid or missing API key"
+
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          description: Seconds until rate limit resets
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          description: Remaining requests in current window
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          description: Unix timestamp when limit resets
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Rate limit exceeded
+              retryAfter:
+                type: integer
+                description: Seconds until rate limit resets
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: Internal server error
