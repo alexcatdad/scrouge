@@ -1,4 +1,0 @@
-[test]
-# Only look for tests in the tests/ directory
-root = "./tests"
-

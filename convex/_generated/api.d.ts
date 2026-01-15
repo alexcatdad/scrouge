@@ -20,6 +20,7 @@ import type * as mcpApiKeys from "../mcpApiKeys.js";
 import type * as paymentMethods from "../paymentMethods.js";
 import type * as pricing from "../pricing.js";
 import type * as router from "../router.js";
+import type * as sharing from "../sharing.js";
 import type * as subscriptions from "../subscriptions.js";
 
 import type {
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   paymentMethods: typeof paymentMethods;
   pricing: typeof pricing;
   router: typeof router;
+  sharing: typeof sharing;
   subscriptions: typeof subscriptions;
 }>;
 

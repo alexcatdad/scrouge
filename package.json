@@ -1,77 +1,41 @@
 {
-  "name": "scrouge",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "dev:backend": "convex dev",
-    "build": "vite build",
-    "preview": "vite preview",
-    "serve": "bun run index.ts",
-    "lint": "biome check . && tsc -p convex --noEmit --pretty false && tsc -p . --noEmit --pretty false",
-    "lint:fix": "biome check --write .",
-    "format": "biome format --write .",
-    "typecheck": "tsc -p convex --noEmit && tsc -p . --noEmit",
-    "test": "bun test tests/",
-    "test:unit": "bun test tests/",
-    "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
-    "prepare": "husky",
-    "commitlint": "commitlint --edit",
-    "build:analyze": "vite build --mode production && echo 'Bundle stats written to bundle-stats.html'",
-    "changeset": "changeset",
-    "changeset:status": "changeset status",
-    "version": "changeset version",
-    "release": "changeset version && changeset tag"
-  },
-  "dependencies": {
-    "@ai-sdk/mistral": "^3.0.5",
-    "@ai-sdk/openai": "^3.0.7",
-    "@ai-sdk/xai": "^3.0.13",
-    "@convex-dev/auth": "^0.0.90",
-    "@mlc-ai/web-llm": "^0.2.80",
-    "@t3-oss/env-core": "^0.13.10",
-    "ai": "^6.0.27",
-    "clsx": "^2.1.1",
-    "convex": "^1.31.3",
-    "dexie": "^4.2.1",
-    "dexie-react-hooks": "^4.2.0",
-    "ollama-ai-provider-v2": "^2.0.0",
-    "openai": "^6.16.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.4.0",
-    "zod": "^4.3.5"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.3.11",
-    "@changesets/changelog-github": "^0.5.1",
-    "@changesets/cli": "^2.28.1",
-    "@commitlint/cli": "^20.3.1",
-    "@commitlint/config-conventional": "^20.3.1",
-    "@playwright/test": "^1.57.0",
-    "@tailwindcss/cli": "^4.1.18",
-    "@tailwindcss/vite": "^4.1.18",
-    "@types/node": "^25.0.6",
-    "@types/react": "^19.2.8",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.2",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
-    "rollup-plugin-visualizer": "^6.0.5",
-    "tailwindcss": "^4.1.18",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1"
-  },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "biome check --write --no-errors-on-unmatched"
-    ],
-    "*.{json,md,yaml,yml}": [
-      "biome format --write --no-errors-on-unmatched"
-    ]
-  }
+	"name": "scrouge",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-auto": "^7.0.0",
+		"@sveltejs/kit": "^2.49.1",
+		"@sveltejs/vite-plugin-svelte": "^6.2.1",
+		"@tailwindcss/vite": "^4.1.18",
+		"@types/node": "^25.0.9",
+		"svelte": "^5.45.6",
+		"svelte-check": "^4.3.4",
+		"tailwindcss": "^4.1.18",
+		"typescript": "^5.9.3",
+		"vite": "^7.2.6"
+	},
+	"dependencies": {
+		"@ai-sdk/mistral": "^3.0.8",
+		"@ai-sdk/openai": "^3.0.11",
+		"@ai-sdk/xai": "^3.0.25",
+		"@auth/core": "^0.37.0",
+		"@convex-dev/auth": "^0.0.90",
+		"@convex-dev/better-auth": "^0.10.10",
+		"@mmailaender/convex-better-auth-svelte": "^0.5.0",
+		"ai": "^6.0.37",
+		"better-auth": "1.4.9",
+		"convex": "^1.31.4",
+		"convex-svelte": "^0.0.12",
+		"ollama-ai-provider-v2": "^2.0.0",
+		"zod": "^4.3.5"
+	}
 }

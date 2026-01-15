@@ -301,7 +301,6 @@ http.route({
     }
 
     try {
-      // @ts-expect-error sharing module types will be available after convex dev regenerates types
       const inviteInfo = await ctx.runQuery(internal.sharing.getInviteInfoInternal, { token });
       return successResponse(inviteInfo);
     } catch (error) {

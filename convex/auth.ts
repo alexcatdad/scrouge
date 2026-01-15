@@ -17,6 +17,9 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   ],
 });
 
+// Helper function to get current user ID (exported for use in other files)
+export { getAuthUserId };
+
 export const loggedInUser = query({
   args: {},
   returns: v.union(
