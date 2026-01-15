@@ -22,6 +22,7 @@ import type * as pricing from "../pricing.js";
 import type * as router from "../router.js";
 import type * as sharing from "../sharing.js";
 import type * as subscriptions from "../subscriptions.js";
+import type * as testing from "../testing.js";
 
 import type {
   ApiFromModules,
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   router: typeof router;
   sharing: typeof sharing;
   subscriptions: typeof subscriptions;
+  testing: typeof testing;
 }>;
 
 /**

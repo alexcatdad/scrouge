@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { httpAction, internalMutation, internalQuery } from "./_generated/server";
 import { checkRateLimit, RATE_LIMITS } from "./lib/rateLimit";
@@ -306,6 +306,73 @@ http.route({
     } catch (error) {
       const message = error instanceof Error ? error.message : "Internal server error";
       return errorResponse(message, 500);
+    }
+  }),
+});
+
+// Test endpoint: Seed a test user and sign them in
+// Only available when CONVEX_IS_TEST=true
+http.route({
+  path: "/api/test/seed-user",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if (process.env.CONVEX_IS_TEST !== "true") {
+      return new Response("Not Found", { status: 404 });
+    }
+
+    try {
+      const { email, password, name } = await request.json();
+
+      // Create user in database
+      await ctx.runMutation(internal.testing.createTestUser, { email, name });
+
+      // Use the real signIn action to create account and get tokens
+      const result = await ctx.runAction(api.auth.signIn, {
+        provider: "password",
+        params: { email, password, name, flow: "signUp" },
+      });
+
+      return new Response(
+        JSON.stringify({
+          email,
+          tokens: result.tokens,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return new Response(JSON.stringify({ error: message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }),
+});
+
+// Test endpoint: Cleanup test user
+http.route({
+  path: "/api/test/cleanup-user",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    if (process.env.CONVEX_IS_TEST !== "true") {
+      return new Response("Not Found", { status: 404 });
+    }
+
+    try {
+      const { email } = await request.json();
+      await ctx.runMutation(internal.testing.deleteTestUser, { email });
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: "Cleanup failed" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
     }
   }),
 });
