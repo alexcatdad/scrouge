@@ -394,6 +394,48 @@ export const listInternal = internalQuery({
 });
 
 /**
+ * Batch create multiple subscriptions at once (for wizard onboarding)
+ */
+export const batchCreate = mutation({
+  args: {
+    subscriptions: v.array(
+      v.object({
+        name: v.string(),
+        cost: v.number(),
+        currency: v.string(),
+        billingCycle: billingCycleValidator,
+        nextBillingDate: v.number(),
+        paymentMethodId: v.id("paymentMethods"),
+        category: v.string(),
+        website: v.optional(v.string()),
+        notes: v.optional(v.string()),
+        maxSlots: v.optional(v.number()),
+      }),
+    ),
+  },
+  returns: v.object({ created: v.number() }),
+  handler: async (ctx, args) => {
+    const userId = await getLoggedInUser(ctx);
+
+    for (const sub of args.subscriptions) {
+      // Validate payment method belongs to user
+      const paymentMethod = await ctx.db.get(sub.paymentMethodId);
+      if (!paymentMethod || paymentMethod.userId !== userId) {
+        throw new Error(`Payment method not found or access denied`);
+      }
+
+      await ctx.db.insert("subscriptions", {
+        userId,
+        ...sub,
+        isActive: true,
+      });
+    }
+
+    return { created: args.subscriptions.length };
+  },
+});
+
+/**
  * Migration mutation to import guest data when user signs up
  * Maps local payment method IDs to new Convex IDs
  */
