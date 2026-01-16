@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { useQuery } from "convex-svelte";
+	import { api } from "$convex/_generated/api";
 	import { goto } from "$app/navigation";
 	import { onMount, setContext } from "svelte";
 	import { PUBLIC_CONVEX_URL } from "$env/static/public";
@@ -20,6 +22,7 @@
 
 	setContext("wizard", wizardState);
 
+	const userQuery = useQuery(api.auth.loggedInUser, {});
 	const namespace = PUBLIC_CONVEX_URL.replace(/[^a-zA-Z0-9]/g, "");
 
 	// Track auth state
@@ -33,6 +36,13 @@
 			goto("/sign-in");
 		} else {
 			isChecking = false;
+		}
+	});
+
+	// Redirect if user becomes unauthenticated
+	$effect(() => {
+		if (!isChecking && userQuery.data === null && !userQuery.isLoading) {
+			goto("/sign-in");
 		}
 	});
 </script>

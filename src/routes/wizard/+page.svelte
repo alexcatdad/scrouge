@@ -15,7 +15,6 @@
 	const paymentMethodsQuery = useQuery(api.paymentMethods.list, {});
 
 	// Wizard state
-	let currentStep = $state(1);
 	let searchQuery = $state("");
 	let selectedCategory = $state<string | null>(null);
 
@@ -113,11 +112,6 @@
 		return defaultMethod?._id ?? paymentMethodsQuery.data[0]._id;
 	});
 
-	// Update layout step when currentStep changes
-	$effect(() => {
-		wizard?.setStep(currentStep);
-	});
-
 	// Load persisted state on mount
 	onMount(() => {
 		const stored = localStorage.getItem(STORAGE_KEY);
@@ -141,7 +135,7 @@
 	function handleRestoreState() {
 		if (savedStateToRestore) {
 			selectedTemplates = new Map(savedStateToRestore.selectedTemplates);
-			currentStep = savedStateToRestore.currentStep || 1;
+			wizard?.setStep(savedStateToRestore.currentStep || 1);
 		}
 		showRestorePrompt = false;
 		savedStateToRestore = null;
@@ -158,7 +152,7 @@
 		if (selectedTemplates.size > 0) {
 			const data = {
 				selectedTemplates: Array.from(selectedTemplates.entries()),
-				currentStep,
+				currentStep: wizard?.step ?? 1,
 			};
 			localStorage.setItem(
 				STORAGE_KEY,
@@ -209,14 +203,14 @@
 		}
 	}
 
-	function updateSubscriptionField(
+	function updateSubscriptionField<K extends keyof SelectedTemplate>(
 		templateId: string,
-		field: keyof SelectedTemplate,
-		value: string | number
+		field: K,
+		value: SelectedTemplate[K]
 	) {
 		const sub = selectedTemplates.get(templateId);
 		if (sub) {
-			(sub as any)[field] = value;
+			sub[field] = value;
 			selectedTemplates = new Map(selectedTemplates);
 		}
 	}
@@ -238,7 +232,7 @@
 			});
 
 			// Update all subscriptions to use this new payment method
-			for (const [id, sub] of selectedTemplates) {
+			for (const [, sub] of selectedTemplates) {
 				sub.paymentMethodId = newId;
 			}
 			selectedTemplates = new Map(selectedTemplates);
@@ -283,7 +277,7 @@
 				count: result.created,
 				total: Math.round(totalMonthlyCost() * 100) / 100,
 			};
-			currentStep = 3;
+			wizard?.setStep(3);
 
 			// Clear persisted state
 			localStorage.removeItem(STORAGE_KEY);
@@ -295,7 +289,7 @@
 	}
 
 	function goToStep(step: number) {
-		currentStep = step;
+		wizard?.setStep(step);
 	}
 </script>
 
@@ -326,7 +320,7 @@
 		</div>
 	{/if}
 
-	{#if currentStep === 1}
+	{#if wizard?.step === 1}
 		<!-- Step 1: Select Services -->
 		<div class="space-y-4">
 			<!-- Search -->
@@ -447,7 +441,7 @@
 				</button>
 			</div>
 		</div>
-	{:else if currentStep === 2}
+	{:else if wizard?.step === 2}
 		<!-- Step 2: Confirm Details -->
 		<div class="space-y-4">
 			<button
@@ -694,7 +688,7 @@
 				</button>
 			</div>
 		</div>
-	{:else if currentStep === 3}
+	{:else if wizard?.step === 3}
 		<!-- Step 3: Success -->
 		<div class="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
 			<!-- Success Icon -->

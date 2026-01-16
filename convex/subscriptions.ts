@@ -415,6 +415,10 @@ export const batchCreate = mutation({
   },
   returns: v.object({ created: v.number() }),
   handler: async (ctx, args) => {
+    if (args.subscriptions.length === 0) {
+      throw new Error("At least one subscription is required");
+    }
+
     const userId = await getLoggedInUser(ctx);
 
     for (const sub of args.subscriptions) {
