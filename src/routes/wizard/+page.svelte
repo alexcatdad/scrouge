@@ -39,6 +39,13 @@
 	// Success state
 	let successData = $state<{ count: number; total: number } | null>(null);
 
+	// Restore prompt state
+	let showRestorePrompt = $state(false);
+	let savedStateToRestore = $state<{
+		selectedTemplates: [string, SelectedTemplate][];
+		currentStep: number;
+	} | null>(null);
+
 	// Inline payment method creation
 	let showPaymentMethodForm = $state(false);
 	let newPaymentMethodName = $state("");
@@ -117,12 +124,12 @@
 		if (stored) {
 			try {
 				const { timestamp, data } = JSON.parse(stored);
-				if (Date.now() - timestamp < STORAGE_EXPIRY_MS && data.selectedTemplates) {
-					// Restore state
-					selectedTemplates = new Map(data.selectedTemplates);
-					currentStep = data.currentStep || 1;
+				if (Date.now() - timestamp < STORAGE_EXPIRY_MS && data.selectedTemplates && data.selectedTemplates.length > 0) {
+					// Show restore prompt instead of silently restoring
+					savedStateToRestore = data;
+					showRestorePrompt = true;
 				} else {
-					// Expired - clear it
+					// Expired or empty - clear it
 					localStorage.removeItem(STORAGE_KEY);
 				}
 			} catch {
@@ -130,6 +137,21 @@
 			}
 		}
 	});
+
+	function handleRestoreState() {
+		if (savedStateToRestore) {
+			selectedTemplates = new Map(savedStateToRestore.selectedTemplates);
+			currentStep = savedStateToRestore.currentStep || 1;
+		}
+		showRestorePrompt = false;
+		savedStateToRestore = null;
+	}
+
+	function handleStartFresh() {
+		localStorage.removeItem(STORAGE_KEY);
+		showRestorePrompt = false;
+		savedStateToRestore = null;
+	}
 
 	// Persist state changes
 	$effect(() => {
@@ -278,6 +300,32 @@
 </script>
 
 <div class="space-y-6">
+	<!-- Restore Session Prompt Modal -->
+	{#if showRestorePrompt}
+		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+			<div class="bg-surface border border-zinc-700 rounded-2xl p-6 max-w-md mx-4 shadow-xl">
+				<h2 class="text-xl font-bold text-white mb-2">Continue where you left off?</h2>
+				<p class="text-secondary mb-6">
+					You have a previous session in progress. Would you like to continue where you left off?
+				</p>
+				<div class="flex gap-3">
+					<button
+						onclick={handleStartFresh}
+						class="flex-1 py-3 bg-zinc-700 hover:bg-zinc-600 text-white font-medium rounded-xl transition-colors"
+					>
+						Start Fresh
+					</button>
+					<button
+						onclick={handleRestoreState}
+						class="flex-1 py-3 bg-primary hover:bg-primary-hover text-black font-medium rounded-xl transition-colors"
+					>
+						Continue
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
 	{#if currentStep === 1}
 		<!-- Step 1: Select Services -->
 		<div class="space-y-4">
