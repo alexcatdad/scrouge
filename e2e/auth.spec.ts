@@ -30,6 +30,6 @@ test.describe("Auth Flow", () => {
 
 		await expect(page.locator("text=Scrouge").first()).toBeVisible();
 		await expect(page.locator("text=Take Control of Your")).toBeVisible();
-		await expect(page.locator("text=Subscriptions")).toBeVisible();
+		await expect(page.locator("text=Subscriptions").first()).toBeVisible();
 	});
 });

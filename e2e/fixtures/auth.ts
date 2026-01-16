@@ -1,8 +1,14 @@
 import { test as base, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-// Get these from environment or use defaults
-const CONVEX_URL = process.env.PUBLIC_CONVEX_URL || "https://test.convex.cloud";
+// Get Convex URL from environment (loaded via dotenv in playwright.config.ts)
+const CONVEX_URL = process.env.PUBLIC_CONVEX_URL;
+if (!CONVEX_URL) {
+	throw new Error(
+		"PUBLIC_CONVEX_URL environment variable is required for E2E tests. " +
+		"Set it in .env.local or export it before running tests."
+	);
+}
 const CONVEX_SITE_URL = CONVEX_URL.replace(".convex.cloud", ".convex.site");
 const STORAGE_NAMESPACE = CONVEX_URL.replace(/[^a-zA-Z0-9]/g, "");
 
