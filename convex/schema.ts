@@ -122,6 +122,41 @@ const applicationTables = {
     windowStart: v.number(), // Start time of current window
     lastRequest: v.number(), // Timestamp of last request
   }).index("by_key", ["key"]),
+
+  // Service templates for quick subscription creation
+  serviceTemplates: defineTable({
+    name: v.string(),
+    category: v.union(
+      v.literal("streaming"),
+      v.literal("music"),
+      v.literal("gaming"),
+      v.literal("productivity"),
+      v.literal("news"),
+      v.literal("fitness"),
+      v.literal("cloud"),
+      v.literal("other"),
+    ),
+    website: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    defaultPrice: v.optional(v.number()),
+    defaultCurrency: v.optional(v.string()),
+    defaultBillingCycle: v.optional(v.string()),
+  })
+    .index("by_category", ["category"])
+    .searchIndex("search_name", { searchField: "name" }),
+
+  // User requests for new service templates
+  serviceRequests: defineTable({
+    serviceName: v.string(),
+    website: v.optional(v.string()),
+    requestedBy: v.id("users"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
+    createdAt: v.number(),
+  }).index("by_status", ["status"]),
 };
 
 export default defineSchema({

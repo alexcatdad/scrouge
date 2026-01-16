@@ -92,6 +92,25 @@ export const list = query({
   },
 });
 
+export const get = query({
+  args: { id: v.id("subscriptions") },
+  returns: v.union(subscriptionWithPaymentValidator, v.null()),
+  handler: async (ctx, args) => {
+    const userId = await getLoggedInUser(ctx);
+    const subscription = await ctx.db.get(args.id);
+
+    if (!subscription || subscription.userId !== userId) {
+      return null;
+    }
+
+    const paymentMethod = await ctx.db.get(subscription.paymentMethodId);
+    return {
+      ...subscription,
+      paymentMethod,
+    };
+  },
+});
+
 export const create = mutation({
   args: {
     name: v.string(),
