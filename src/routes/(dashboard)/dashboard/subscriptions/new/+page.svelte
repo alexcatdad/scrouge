@@ -1,10 +1,40 @@
 <script lang="ts">
-	import { useQuery } from "convex-svelte";
+	import { useQuery, useConvexClient } from "convex-svelte";
 	import { api } from "$convex/_generated/api";
 	import { goto } from "$app/navigation";
 
+	const client = useConvexClient();
+
 	let searchQuery = $state("");
 	let selectedCategory = $state<string | null>(null);
+
+	// Service request form state
+	let showRequestForm = $state(false);
+	let requestName = $state("");
+	let requestWebsite = $state("");
+	let isRequesting = $state(false);
+	let requestSuccess = $state(false);
+	let requestError = $state("");
+
+	async function handleRequestSubmit(e: SubmitEvent) {
+		e.preventDefault();
+		isRequesting = true;
+		requestError = "";
+		try {
+			await client.mutation(api.serviceRequests.create, {
+				serviceName: requestName || searchQuery,
+				website: requestWebsite || undefined,
+			});
+			requestSuccess = true;
+			showRequestForm = false;
+			requestName = "";
+			requestWebsite = "";
+		} catch (err) {
+			requestError = err instanceof Error ? err.message : "Failed to submit request";
+		} finally {
+			isRequesting = false;
+		}
+	}
 
 	const categories = [
 		{ id: null, label: "All" },
@@ -115,6 +145,60 @@
 	{:else if searchQuery}
 		<div class="text-center py-12">
 			<p class="text-secondary mb-4">No services found for "{searchQuery}"</p>
+
+			<!-- Service Request Form -->
+			{#if showRequestForm}
+				<form onsubmit={handleRequestSubmit} class="max-w-sm mx-auto space-y-3 mb-6">
+					<input
+						type="text"
+						bind:value={requestName}
+						placeholder="Service name"
+						required
+						class="w-full px-4 py-3 bg-surface border border-zinc-700 rounded-lg text-white placeholder:text-secondary focus:outline-none focus:border-primary transition-colors"
+					/>
+					<input
+						type="text"
+						bind:value={requestWebsite}
+						placeholder="Website (optional)"
+						class="w-full px-4 py-3 bg-surface border border-zinc-700 rounded-lg text-white placeholder:text-secondary focus:outline-none focus:border-primary transition-colors"
+					/>
+					{#if requestError}
+						<p class="text-red-400 text-sm">{requestError}</p>
+					{/if}
+					<div class="flex gap-2 justify-center">
+						<button
+							type="button"
+							onclick={() => {
+								showRequestForm = false;
+								requestError = "";
+							}}
+							class="px-4 py-2 bg-surface hover:bg-surface-elevated text-white rounded-lg transition-colors"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={isRequesting}
+							class="px-4 py-2 bg-primary text-black font-medium rounded-lg transition-colors disabled:opacity-50"
+						>
+							{isRequesting ? "Sending..." : "Submit Request"}
+						</button>
+					</div>
+				</form>
+			{:else if requestSuccess}
+				<p class="text-green-400 mb-4">Thanks! We'll review your request.</p>
+			{:else}
+				<button
+					onclick={() => {
+						showRequestForm = true;
+						requestName = searchQuery;
+					}}
+					class="text-primary hover:text-primary/80 underline underline-offset-2 mb-4 block mx-auto transition-colors"
+				>
+					Can't find it? Request this service
+				</button>
+			{/if}
+
 			<button
 				onclick={() => goto("/dashboard/subscriptions/new/manual")}
 				class="px-6 py-3 bg-surface hover:bg-surface-elevated text-white font-medium rounded-lg transition-colors"
