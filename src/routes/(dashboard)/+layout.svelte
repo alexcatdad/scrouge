@@ -9,6 +9,7 @@
 		initGuestStore,
 		getIsGuestMode,
 		disableGuestMode,
+		getAllGuestDataForMigration,
 	} from "$lib/guestStore.svelte";
 	import { hasGuestData } from "$lib/guestStorage";
 
@@ -30,6 +31,8 @@
 	// Track auth and guest state
 	let isChecking = $state(true);
 	let isAuthenticated = $state(false);
+	let migrationMessage = $state("");
+	let hasMigratedOAuth = $state(false);
 
 	// Get reactive guest mode state
 	const isGuestMode = $derived(getIsGuestMode());
@@ -53,6 +56,61 @@
 		}
 	});
 
+	// Migrate guest data after OAuth sign-in
+	async function migrateGuestDataAfterOAuth(): Promise<void> {
+		const guestData = getAllGuestDataForMigration();
+
+		// Only migrate if there's data
+		if (
+			guestData.paymentMethods.length === 0 &&
+			guestData.subscriptions.length === 0
+		) {
+			return;
+		}
+
+		try {
+			const result = await client.mutation(api.subscriptions.migrateFromGuest, {
+				paymentMethods: guestData.paymentMethods.map((pm) => ({
+					localId: pm.localId,
+					name: pm.name,
+					type: pm.type,
+					lastFourDigits: pm.lastFourDigits,
+					expiryDate: pm.expiryDate,
+					isDefault: pm.isDefault,
+				})),
+				subscriptions: guestData.subscriptions.map((sub) => ({
+					localId: sub.localId,
+					name: sub.name,
+					description: sub.notes,
+					cost: sub.cost,
+					currency: sub.currency,
+					billingCycle: sub.billingCycle,
+					nextBillingDate: sub.nextBillingDate,
+					paymentMethodLocalId: sub.paymentMethodLocalId,
+					category: sub.category,
+					website: sub.website,
+					isActive: sub.isActive,
+					notes: sub.notes,
+				})),
+			});
+
+			// Clear guest data after successful migration
+			disableGuestMode();
+
+			const totalMigrated =
+				result.migratedPaymentMethods + result.migratedSubscriptions;
+			if (totalMigrated > 0) {
+				migrationMessage = `Successfully migrated ${result.migratedSubscriptions} subscription${result.migratedSubscriptions !== 1 ? "s" : ""} and ${result.migratedPaymentMethods} payment method${result.migratedPaymentMethods !== 1 ? "s" : ""} from guest mode`;
+				// Auto-dismiss after 5 seconds
+				setTimeout(() => {
+					migrationMessage = "";
+				}, 5000);
+			}
+		} catch (err) {
+			console.error("Failed to migrate guest data after OAuth:", err);
+		}
+	}
+
 	// Redirect if user becomes unauthenticated and is not in guest mode
 	$effect(() => {
 		if (
@@ -66,6 +124,26 @@
 		// Update authenticated state when query resolves
 		if (userQuery.data !== null && userQuery.data !== undefined) {
 			isAuthenticated = true;
+		}
+	});
+
+	// Handle OAuth migration when user becomes authenticated
+	$effect(() => {
+		if (
+			userQuery.data !== null &&
+			userQuery.data !== undefined &&
+			!hasMigratedOAuth
+		) {
+			// Check if we need to migrate guest data after OAuth
+			const shouldMigrate =
+				typeof window !== "undefined" &&
+				localStorage.getItem("scrouge_migrate_guest_after_oauth") === "true";
+
+			if (shouldMigrate) {
+				hasMigratedOAuth = true;
+				localStorage.removeItem("scrouge_migrate_guest_after_oauth");
+				migrateGuestDataAfterOAuth();
+			}
 		}
 	});
 
@@ -97,6 +175,51 @@
 	</div>
 {:else}
 	<div class="min-h-screen bg-[#0a0a0b]">
+		<!-- Migration Success Banner -->
+		{#if migrationMessage}
+			<div class="bg-green-500/10 border-b border-green-500/20">
+				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+					<div class="flex items-center justify-between gap-4">
+						<div class="flex items-center gap-2">
+							<svg
+								class="w-5 h-5 text-green-400"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M5 13l4 4L19 7"
+								/>
+							</svg>
+							<span class="text-sm text-white">{migrationMessage}</span>
+						</div>
+						<button
+							onclick={() => (migrationMessage = "")}
+							class="text-green-400 hover:text-green-300 transition-colors"
+							aria-label="Dismiss notification"
+						>
+							<svg
+								class="w-5 h-5"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M6 18L18 6M6 6l12 12"
+								/>
+							</svg>
+						</button>
+					</div>
+				</div>
+			</div>
+		{/if}
+
 		<!-- Guest Mode Banner -->
 		{#if isGuestMode && !isAuthenticated}
 			<div class="bg-primary/10 border-b border-primary/20">
