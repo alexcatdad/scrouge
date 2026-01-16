@@ -4,20 +4,48 @@
 	import { api } from "$convex/_generated/api";
 	import { goto } from "$app/navigation";
 	import type { Id } from "$convex/_generated/dataModel";
+	import {
+		getIsGuestMode,
+		getSubscriptionById,
+		getPaymentMethodById,
+		getGuestPaymentMethods,
+		updateSubscription as updateGuestSubscription,
+		removeSubscription as removeGuestSubscription,
+	} from "$lib/guestStore.svelte";
 
 	const client = useConvexClient();
-	const subscriptionId = $derived($page.params.id as Id<"subscriptions">);
+	const subscriptionId = $derived($page.params.id ?? "");
+	const isGuestParam = $derived($page.url.searchParams.get("guest") === "true");
 
-	const subscriptionQuery = useQuery(api.subscriptions.get, { id: subscriptionId });
+	// Check if in guest mode
+	const isGuestMode = $derived(getIsGuestMode() || isGuestParam);
+
+	// Convex queries (only used when authenticated)
+	const subscriptionQuery = useQuery(api.subscriptions.get, {
+		id: subscriptionId as Id<"subscriptions">,
+	});
 	const paymentMethodsQuery = useQuery(api.paymentMethods.list, {});
 
-	// Form state (populated from query)
+	// Guest mode data
+	const guestSubscription = $derived(
+		subscriptionId ? getSubscriptionById(subscriptionId) : undefined,
+	);
+	const guestPaymentMethods = $derived(getGuestPaymentMethods());
+	const guestPaymentMethod = $derived(
+		guestSubscription
+			? getPaymentMethodById(guestSubscription.paymentMethodLocalId)
+			: undefined,
+	);
+
+	// Form state (populated from query or guest data)
 	let name = $state("");
 	let cost = $state(0);
 	let currency = $state("USD");
-	let billingCycle = $state<"monthly" | "yearly" | "weekly" | "daily">("monthly");
+	let billingCycle = $state<"monthly" | "yearly" | "weekly" | "daily">(
+		"monthly",
+	);
 	let nextBillingDate = $state("");
-	let paymentMethodId = $state<Id<"paymentMethods"> | "">("");
+	let paymentMethodId = $state<string>("");
 	let category = $state("");
 	let website = $state("");
 	let notes = $state("");
@@ -31,22 +59,62 @@
 	let error = $state("");
 	let showDeleteConfirm = $state(false);
 
+	// Get the subscription data based on mode
+	const subscriptionData = $derived(
+		isGuestMode
+			? guestSubscription
+				? {
+						name: guestSubscription.name,
+						cost: guestSubscription.cost,
+						currency: guestSubscription.currency,
+						billingCycle: guestSubscription.billingCycle,
+						nextBillingDate: guestSubscription.nextBillingDate,
+						paymentMethodId: guestSubscription.paymentMethodLocalId,
+						category: guestSubscription.category,
+						website: guestSubscription.website,
+						notes: guestSubscription.notes,
+						maxSlots: guestSubscription.maxSlots,
+						isActive: guestSubscription.isActive,
+						paymentMethod: guestPaymentMethod
+							? {
+									name: guestPaymentMethod.name,
+									lastFourDigits: guestPaymentMethod.lastFourDigits,
+								}
+							: undefined,
+					}
+				: null
+			: subscriptionQuery.data,
+	);
+
+	const paymentMethods = $derived(
+		isGuestMode
+			? guestPaymentMethods.map((pm) => ({
+					_id: pm.localId,
+					name: pm.name,
+					lastFourDigits: pm.lastFourDigits,
+				}))
+			: (paymentMethodsQuery.data ?? []),
+	);
+
+	const isLoading = $derived(!isGuestMode && subscriptionQuery.isLoading);
+
 	// Populate form when subscription loads
 	$effect(() => {
-		if (subscriptionQuery.data) {
-			const sub = subscriptionQuery.data;
-			name = sub.name;
-			cost = sub.cost;
-			currency = sub.currency;
-			billingCycle = sub.billingCycle;
-			nextBillingDate = new Date(sub.nextBillingDate).toISOString().split("T")[0];
-			paymentMethodId = sub.paymentMethodId;
-			category = sub.category;
-			website = sub.website ?? "";
-			notes = sub.notes ?? "";
-			maxSlots = sub.maxSlots ?? null;
-			isFamilyPlan = !!sub.maxSlots;
-			isActive = sub.isActive;
+		if (subscriptionData) {
+			name = subscriptionData.name;
+			cost = subscriptionData.cost;
+			currency = subscriptionData.currency;
+			billingCycle = subscriptionData.billingCycle;
+			nextBillingDate = new Date(subscriptionData.nextBillingDate)
+				.toISOString()
+				.split("T")[0];
+			paymentMethodId = subscriptionData.paymentMethodId;
+			category = subscriptionData.category;
+			website = subscriptionData.website ?? "";
+			notes = subscriptionData.notes ?? "";
+			maxSlots = subscriptionData.maxSlots ?? null;
+			isFamilyPlan = !!subscriptionData.maxSlots;
+			isActive = subscriptionData.isActive;
 		}
 	});
 
@@ -61,23 +129,41 @@
 		error = "";
 
 		try {
-			await client.mutation(api.subscriptions.update, {
-				id: subscriptionId,
-				name,
-				cost,
-				currency,
-				billingCycle,
-				nextBillingDate: new Date(nextBillingDate).getTime(),
-				paymentMethodId: paymentMethodId as Id<"paymentMethods">,
-				category,
-				website: website || undefined,
-				notes: notes || undefined,
-				maxSlots: isFamilyPlan && maxSlots ? maxSlots : undefined,
-				isActive,
-			});
-			isEditing = false;
+			if (isGuestMode) {
+				updateGuestSubscription(subscriptionId, {
+					name,
+					cost,
+					currency,
+					billingCycle,
+					nextBillingDate: new Date(nextBillingDate).getTime(),
+					paymentMethodLocalId: paymentMethodId,
+					category,
+					website: website || undefined,
+					notes: notes || undefined,
+					maxSlots: isFamilyPlan && maxSlots ? maxSlots : undefined,
+					isActive,
+				});
+				isEditing = false;
+			} else {
+				await client.mutation(api.subscriptions.update, {
+					id: subscriptionId as Id<"subscriptions">,
+					name,
+					cost,
+					currency,
+					billingCycle,
+					nextBillingDate: new Date(nextBillingDate).getTime(),
+					paymentMethodId: paymentMethodId as Id<"paymentMethods">,
+					category,
+					website: website || undefined,
+					notes: notes || undefined,
+					maxSlots: isFamilyPlan && maxSlots ? maxSlots : undefined,
+					isActive,
+				});
+				isEditing = false;
+			}
 		} catch (err) {
-			error = err instanceof Error ? err.message : "Failed to update subscription";
+			error =
+				err instanceof Error ? err.message : "Failed to update subscription";
 		} finally {
 			isSubmitting = false;
 		}
@@ -86,10 +172,18 @@
 	async function handleDelete() {
 		isDeleting = true;
 		try {
-			await client.mutation(api.subscriptions.remove, { id: subscriptionId });
-			goto("/dashboard/subscriptions");
+			if (isGuestMode) {
+				removeGuestSubscription(subscriptionId);
+				goto("/dashboard/subscriptions");
+			} else {
+				await client.mutation(api.subscriptions.remove, {
+					id: subscriptionId as Id<"subscriptions">,
+				});
+				goto("/dashboard/subscriptions");
+			}
 		} catch (err) {
-			error = err instanceof Error ? err.message : "Failed to delete subscription";
+			error =
+				err instanceof Error ? err.message : "Failed to delete subscription";
 			isDeleting = false;
 		}
 	}
@@ -112,11 +206,16 @@
 
 	function getBillingLabel(cycle: string): string {
 		switch (cycle) {
-			case "monthly": return "Monthly";
-			case "yearly": return "Yearly";
-			case "weekly": return "Weekly";
-			case "daily": return "Daily";
-			default: return cycle;
+			case "monthly":
+				return "Monthly";
+			case "yearly":
+				return "Yearly";
+			case "weekly":
+				return "Weekly";
+			case "daily":
+				return "Daily";
+			default:
+				return cycle;
 		}
 	}
 
@@ -130,17 +229,32 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-4">
-			<button onclick={() => goto("/dashboard/subscriptions")} class="p-2 -ml-2 hover:bg-surface rounded-lg transition-colors">
-				<svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+			<button
+				onclick={() => goto("/dashboard/subscriptions")}
+				class="p-2 -ml-2 hover:bg-surface rounded-lg transition-colors"
+			>
+				<svg
+					class="w-5 h-5 text-secondary"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M15 19l-7-7 7-7"
+					/>
 				</svg>
 			</button>
-			{#if subscriptionQuery.data}
+			{#if subscriptionData}
 				<div class="flex items-center gap-3">
-					<div class="w-10 h-10 bg-surface rounded-lg flex items-center justify-center overflow-hidden">
-						{#if subscriptionQuery.data.website}
+					<div
+						class="w-10 h-10 bg-surface rounded-lg flex items-center justify-center overflow-hidden"
+					>
+						{#if subscriptionData.website}
 							<img
-								src={getIconUrl(subscriptionQuery.data.website)}
+								src={getIconUrl(subscriptionData.website)}
 								alt=""
 								class="w-8 h-8 object-contain"
 								onerror={(e) => {
@@ -150,12 +264,12 @@
 							/>
 						{/if}
 						<span class="text-lg font-bold text-primary">
-							{subscriptionQuery.data.name.charAt(0).toUpperCase()}
+							{subscriptionData.name.charAt(0).toUpperCase()}
 						</span>
 					</div>
 					<div>
-						<h1 class="text-xl font-bold text-white">{subscriptionQuery.data.name}</h1>
-						{#if !subscriptionQuery.data.isActive}
+						<h1 class="text-xl font-bold text-white">{subscriptionData.name}</h1>
+						{#if !subscriptionData.isActive}
 							<span class="text-xs text-zinc-400">Inactive</span>
 						{/if}
 					</div>
@@ -165,7 +279,7 @@
 			{/if}
 		</div>
 
-		{#if subscriptionQuery.data && !isEditing}
+		{#if subscriptionData && !isEditing}
 			<button
 				onclick={() => (isEditing = true)}
 				class="px-4 py-2 bg-surface hover:bg-surface-elevated text-white text-sm font-medium rounded-lg transition-colors"
@@ -175,15 +289,17 @@
 		{/if}
 	</div>
 
-	{#if subscriptionQuery.isLoading}
+	{#if isLoading}
 		<div class="space-y-4">
 			{#each [1, 2, 3, 4] as _}
 				<div class="h-16 bg-surface rounded-xl animate-pulse"></div>
 			{/each}
 		</div>
-	{:else if subscriptionQuery.data}
+	{:else if subscriptionData}
 		{#if error}
-			<div class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+			<div
+				class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm"
+			>
 				{error}
 			</div>
 		{/if}
@@ -193,7 +309,9 @@
 			<form onsubmit={handleSubmit} class="space-y-4">
 				<!-- Name -->
 				<div>
-					<label for="name" class="block text-sm font-medium text-secondary mb-2">Name</label>
+					<label for="name" class="block text-sm font-medium text-secondary mb-2"
+						>Name</label
+					>
 					<input
 						type="text"
 						id="name"
@@ -206,7 +324,10 @@
 				<!-- Cost & Currency -->
 				<div class="grid grid-cols-2 gap-4">
 					<div>
-						<label for="cost" class="block text-sm font-medium text-secondary mb-2">Cost</label>
+						<label
+							for="cost"
+							class="block text-sm font-medium text-secondary mb-2">Cost</label
+						>
 						<input
 							type="number"
 							id="cost"
@@ -218,7 +339,11 @@
 						/>
 					</div>
 					<div>
-						<label for="currency" class="block text-sm font-medium text-secondary mb-2">Currency</label>
+						<label
+							for="currency"
+							class="block text-sm font-medium text-secondary mb-2"
+							>Currency</label
+						>
 						<select
 							id="currency"
 							bind:value={currency}
@@ -235,7 +360,11 @@
 
 				<!-- Billing Cycle -->
 				<div>
-					<label for="billingCycle" class="block text-sm font-medium text-secondary mb-2">Billing Cycle</label>
+					<label
+						for="billingCycle"
+						class="block text-sm font-medium text-secondary mb-2"
+						>Billing Cycle</label
+					>
 					<select
 						id="billingCycle"
 						bind:value={billingCycle}
@@ -250,7 +379,11 @@
 
 				<!-- Next Billing Date -->
 				<div>
-					<label for="nextBillingDate" class="block text-sm font-medium text-secondary mb-2">Next Billing Date</label>
+					<label
+						for="nextBillingDate"
+						class="block text-sm font-medium text-secondary mb-2"
+						>Next Billing Date</label
+					>
 					<input
 						type="date"
 						id="nextBillingDate"
@@ -262,15 +395,19 @@
 
 				<!-- Payment Method -->
 				<div>
-					<label for="paymentMethod" class="block text-sm font-medium text-secondary mb-2">Payment Method</label>
-					{#if paymentMethodsQuery.data && paymentMethodsQuery.data.length > 0}
+					<label
+						for="paymentMethod"
+						class="block text-sm font-medium text-secondary mb-2"
+						>Payment Method</label
+					>
+					{#if paymentMethods && paymentMethods.length > 0}
 						<select
 							id="paymentMethod"
 							bind:value={paymentMethodId}
 							required
 							class="w-full px-4 py-3 bg-surface border border-zinc-700 rounded-xl text-white focus:outline-none focus:border-primary transition-colors"
 						>
-							{#each paymentMethodsQuery.data as pm}
+							{#each paymentMethods as pm}
 								<option value={pm._id}>
 									{pm.name}
 									{#if pm.lastFourDigits}(*{pm.lastFourDigits}){/if}
@@ -282,7 +419,11 @@
 
 				<!-- Category -->
 				<div>
-					<label for="category" class="block text-sm font-medium text-secondary mb-2">Category</label>
+					<label
+						for="category"
+						class="block text-sm font-medium text-secondary mb-2"
+						>Category</label
+					>
 					<select
 						id="category"
 						bind:value={category}
@@ -304,14 +445,22 @@
 				<div class="flex items-center justify-between p-4 bg-surface rounded-xl">
 					<div>
 						<p class="font-medium text-white">Active</p>
-						<p class="text-sm text-secondary">Inactive subscriptions won't show in totals</p>
+						<p class="text-sm text-secondary">
+							Inactive subscriptions won't show in totals
+						</p>
 					</div>
 					<button
 						type="button"
 						onclick={() => (isActive = !isActive)}
-						class="relative w-12 h-7 rounded-full transition-colors {isActive ? 'bg-primary' : 'bg-zinc-700'}"
+						class="relative w-12 h-7 rounded-full transition-colors {isActive
+							? 'bg-primary'
+							: 'bg-zinc-700'}"
 					>
-						<span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform {isActive ? 'translate-x-5' : ''}"></span>
+						<span
+							class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform {isActive
+								? 'translate-x-5'
+								: ''}"
+						></span>
 					</button>
 				</div>
 
@@ -319,20 +468,32 @@
 				<div class="flex items-center justify-between p-4 bg-surface rounded-xl">
 					<div>
 						<p class="font-medium text-white">Family Plan</p>
-						<p class="text-sm text-secondary">Track slots and calculate per-person cost</p>
+						<p class="text-sm text-secondary">
+							Track slots and calculate per-person cost
+						</p>
 					</div>
 					<button
 						type="button"
 						onclick={() => (isFamilyPlan = !isFamilyPlan)}
-						class="relative w-12 h-7 rounded-full transition-colors {isFamilyPlan ? 'bg-primary' : 'bg-zinc-700'}"
+						class="relative w-12 h-7 rounded-full transition-colors {isFamilyPlan
+							? 'bg-primary'
+							: 'bg-zinc-700'}"
 					>
-						<span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform {isFamilyPlan ? 'translate-x-5' : ''}"></span>
+						<span
+							class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform {isFamilyPlan
+								? 'translate-x-5'
+								: ''}"
+						></span>
 					</button>
 				</div>
 
 				{#if isFamilyPlan}
 					<div>
-						<label for="maxSlots" class="block text-sm font-medium text-secondary mb-2">Max Slots</label>
+						<label
+							for="maxSlots"
+							class="block text-sm font-medium text-secondary mb-2"
+							>Max Slots</label
+						>
 						<input
 							type="number"
 							id="maxSlots"
@@ -346,7 +507,9 @@
 
 				<!-- Notes -->
 				<div>
-					<label for="notes" class="block text-sm font-medium text-secondary mb-2">Notes</label>
+					<label for="notes" class="block text-sm font-medium text-secondary mb-2"
+						>Notes</label
+					>
 					<textarea
 						id="notes"
 						bind:value={notes}
@@ -379,42 +542,48 @@
 				<div class="p-4 bg-surface rounded-xl">
 					<p class="text-sm text-secondary mb-1">Cost</p>
 					<p class="text-2xl font-bold text-white">
-						{formatCurrency(subscriptionQuery.data.cost, subscriptionQuery.data.currency)}
-						<span class="text-lg text-secondary font-normal">/ {subscriptionQuery.data.billingCycle}</span>
+						{formatCurrency(subscriptionData.cost, subscriptionData.currency)}
+						<span class="text-lg text-secondary font-normal"
+							>/ {subscriptionData.billingCycle}</span
+						>
 					</p>
 				</div>
 
 				<div class="p-4 bg-surface rounded-xl">
 					<p class="text-sm text-secondary mb-1">Next Billing</p>
-					<p class="text-lg text-white">{formatDate(subscriptionQuery.data.nextBillingDate)}</p>
+					<p class="text-lg text-white">
+						{formatDate(subscriptionData.nextBillingDate)}
+					</p>
 				</div>
 
 				<div class="p-4 bg-surface rounded-xl">
 					<p class="text-sm text-secondary mb-1">Payment Method</p>
 					<p class="text-lg text-white">
-						{subscriptionQuery.data.paymentMethod?.name ?? "Unknown"}
-						{#if subscriptionQuery.data.paymentMethod?.lastFourDigits}
-							<span class="text-secondary">(*{subscriptionQuery.data.paymentMethod.lastFourDigits})</span>
+						{subscriptionData.paymentMethod?.name ?? "Unknown"}
+						{#if subscriptionData.paymentMethod?.lastFourDigits}
+							<span class="text-secondary"
+								>(*{subscriptionData.paymentMethod.lastFourDigits})</span
+							>
 						{/if}
 					</p>
 				</div>
 
 				<div class="p-4 bg-surface rounded-xl">
 					<p class="text-sm text-secondary mb-1">Category</p>
-					<p class="text-lg text-white capitalize">{subscriptionQuery.data.category}</p>
+					<p class="text-lg text-white capitalize">{subscriptionData.category}</p>
 				</div>
 
-				{#if subscriptionQuery.data.maxSlots}
+				{#if subscriptionData.maxSlots}
 					<div class="p-4 bg-surface rounded-xl">
 						<p class="text-sm text-secondary mb-1">Family Plan</p>
-						<p class="text-lg text-white">{subscriptionQuery.data.maxSlots} slots</p>
+						<p class="text-lg text-white">{subscriptionData.maxSlots} slots</p>
 					</div>
 				{/if}
 
-				{#if subscriptionQuery.data.notes}
+				{#if subscriptionData.notes}
 					<div class="p-4 bg-surface rounded-xl">
 						<p class="text-sm text-secondary mb-1">Notes</p>
-						<p class="text-white">{subscriptionQuery.data.notes}</p>
+						<p class="text-white">{subscriptionData.notes}</p>
 					</div>
 				{/if}
 
@@ -422,7 +591,10 @@
 				<div class="pt-4 border-t border-zinc-800">
 					{#if showDeleteConfirm}
 						<div class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-							<p class="text-red-400 mb-4">Are you sure you want to delete this subscription? This cannot be undone.</p>
+							<p class="text-red-400 mb-4">
+								Are you sure you want to delete this subscription? This cannot be
+								undone.
+							</p>
 							<div class="flex gap-3">
 								<button
 									onclick={() => (showDeleteConfirm = false)}

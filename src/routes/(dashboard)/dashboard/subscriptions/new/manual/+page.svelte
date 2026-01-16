@@ -3,17 +3,46 @@
 	import { api } from "$convex/_generated/api";
 	import { goto } from "$app/navigation";
 	import type { Id } from "$convex/_generated/dataModel";
+	import {
+		getIsGuestMode,
+		getGuestPaymentMethods,
+		getDefaultPaymentMethod,
+		addSubscription as addGuestSubscription,
+	} from "$lib/guestStore.svelte";
 
 	const client = useConvexClient();
+
+	// Check if in guest mode
+	const isGuestMode = $derived(getIsGuestMode());
+
+	// Convex query (only used when authenticated)
 	const paymentMethodsQuery = useQuery(api.paymentMethods.list, {});
+
+	// Guest mode data
+	const guestPaymentMethods = $derived(getGuestPaymentMethods());
+	const defaultGuestMethod = $derived(getDefaultPaymentMethod());
+
+	// Unified payment methods
+	const paymentMethods = $derived(
+		isGuestMode
+			? guestPaymentMethods.map((pm) => ({
+					_id: pm.localId,
+					name: pm.name,
+					lastFourDigits: pm.lastFourDigits,
+					isDefault: pm.isDefault,
+				}))
+			: (paymentMethodsQuery.data ?? []),
+	);
 
 	// Form state
 	let name = $state("");
 	let cost = $state(0);
 	let currency = $state("USD");
-	let billingCycle = $state<"monthly" | "yearly" | "weekly" | "daily">("monthly");
+	let billingCycle = $state<"monthly" | "yearly" | "weekly" | "daily">(
+		"monthly",
+	);
 	let nextBillingDate = $state("");
-	let paymentMethodId = $state<Id<"paymentMethods"> | "">("");
+	let paymentMethodId = $state<string>("");
 	let category = $state("other");
 	let website = $state("");
 	let notes = $state("");
@@ -25,12 +54,12 @@
 
 	// Set default payment method
 	$effect(() => {
-		if (paymentMethodsQuery.data && !paymentMethodId) {
-			const defaultMethod = paymentMethodsQuery.data.find((pm) => pm.isDefault);
+		if (paymentMethods.length > 0 && !paymentMethodId) {
+			const defaultMethod = paymentMethods.find((pm) => pm.isDefault);
 			if (defaultMethod) {
 				paymentMethodId = defaultMethod._id;
-			} else if (paymentMethodsQuery.data.length > 0) {
-				paymentMethodId = paymentMethodsQuery.data[0]._id;
+			} else {
+				paymentMethodId = paymentMethods[0]._id;
 			}
 		}
 	});
@@ -46,21 +75,39 @@
 		error = "";
 
 		try {
-			await client.mutation(api.subscriptions.create, {
-				name,
-				cost,
-				currency,
-				billingCycle,
-				nextBillingDate: new Date(nextBillingDate).getTime(),
-				paymentMethodId: paymentMethodId as Id<"paymentMethods">,
-				category,
-				website: website || undefined,
-				notes: notes || undefined,
-				maxSlots: isFamilyPlan && maxSlots ? maxSlots : undefined,
-			});
-			goto("/dashboard/subscriptions");
+			if (isGuestMode) {
+				addGuestSubscription({
+					name,
+					cost,
+					currency,
+					billingCycle,
+					nextBillingDate: new Date(nextBillingDate).getTime(),
+					paymentMethodLocalId: paymentMethodId,
+					category,
+					website: website || undefined,
+					notes: notes || undefined,
+					maxSlots: isFamilyPlan && maxSlots ? maxSlots : undefined,
+					isActive: true,
+				});
+				goto("/dashboard/subscriptions");
+			} else {
+				await client.mutation(api.subscriptions.create, {
+					name,
+					cost,
+					currency,
+					billingCycle,
+					nextBillingDate: new Date(nextBillingDate).getTime(),
+					paymentMethodId: paymentMethodId as Id<"paymentMethods">,
+					category,
+					website: website || undefined,
+					notes: notes || undefined,
+					maxSlots: isFamilyPlan && maxSlots ? maxSlots : undefined,
+				});
+				goto("/dashboard/subscriptions");
+			}
 		} catch (err) {
-			error = err instanceof Error ? err.message : "Failed to create subscription";
+			error =
+				err instanceof Error ? err.message : "Failed to create subscription";
 		} finally {
 			isSubmitting = false;
 		}
@@ -70,16 +117,31 @@
 <div class="space-y-6 max-w-lg mx-auto">
 	<!-- Header -->
 	<div class="flex items-center gap-4">
-		<button onclick={() => goto("/dashboard/subscriptions/new")} class="p-2 -ml-2 hover:bg-surface rounded-lg transition-colors">
-			<svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+		<button
+			onclick={() => goto("/dashboard/subscriptions/new")}
+			class="p-2 -ml-2 hover:bg-surface rounded-lg transition-colors"
+		>
+			<svg
+				class="w-5 h-5 text-secondary"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M15 19l-7-7 7-7"
+				/>
 			</svg>
 		</button>
 		<h1 class="text-xl font-bold text-white">Add Subscription</h1>
 	</div>
 
 	{#if error}
-		<div class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+		<div
+			class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm"
+		>
 			{error}
 		</div>
 	{/if}
@@ -87,7 +149,9 @@
 	<form onsubmit={handleSubmit} class="space-y-4">
 		<!-- Name -->
 		<div>
-			<label for="name" class="block text-sm font-medium text-secondary mb-2">Name</label>
+			<label for="name" class="block text-sm font-medium text-secondary mb-2"
+				>Name</label
+			>
 			<input
 				type="text"
 				id="name"
@@ -100,7 +164,9 @@
 
 		<!-- Website -->
 		<div>
-			<label for="website" class="block text-sm font-medium text-secondary mb-2">Website (optional)</label>
+			<label for="website" class="block text-sm font-medium text-secondary mb-2"
+				>Website (optional)</label
+			>
 			<input
 				type="text"
 				id="website"
@@ -113,7 +179,9 @@
 		<!-- Cost & Currency -->
 		<div class="grid grid-cols-2 gap-4">
 			<div>
-				<label for="cost" class="block text-sm font-medium text-secondary mb-2">Cost</label>
+				<label for="cost" class="block text-sm font-medium text-secondary mb-2"
+					>Cost</label
+				>
 				<input
 					type="number"
 					id="cost"
@@ -125,7 +193,10 @@
 				/>
 			</div>
 			<div>
-				<label for="currency" class="block text-sm font-medium text-secondary mb-2">Currency</label>
+				<label
+					for="currency"
+					class="block text-sm font-medium text-secondary mb-2">Currency</label
+				>
 				<select
 					id="currency"
 					bind:value={currency}
@@ -142,7 +213,10 @@
 
 		<!-- Billing Cycle -->
 		<div>
-			<label for="billingCycle" class="block text-sm font-medium text-secondary mb-2">Billing Cycle</label>
+			<label
+				for="billingCycle"
+				class="block text-sm font-medium text-secondary mb-2">Billing Cycle</label
+			>
 			<select
 				id="billingCycle"
 				bind:value={billingCycle}
@@ -157,7 +231,11 @@
 
 		<!-- Next Billing Date -->
 		<div>
-			<label for="nextBillingDate" class="block text-sm font-medium text-secondary mb-2">Next Billing Date</label>
+			<label
+				for="nextBillingDate"
+				class="block text-sm font-medium text-secondary mb-2"
+				>Next Billing Date</label
+			>
 			<input
 				type="date"
 				id="nextBillingDate"
@@ -169,15 +247,19 @@
 
 		<!-- Payment Method -->
 		<div>
-			<label for="paymentMethod" class="block text-sm font-medium text-secondary mb-2">Payment Method</label>
-			{#if paymentMethodsQuery.data && paymentMethodsQuery.data.length > 0}
+			<label
+				for="paymentMethod"
+				class="block text-sm font-medium text-secondary mb-2"
+				>Payment Method</label
+			>
+			{#if paymentMethods && paymentMethods.length > 0}
 				<select
 					id="paymentMethod"
 					bind:value={paymentMethodId}
 					required
 					class="w-full px-4 py-3 bg-surface border border-zinc-700 rounded-xl text-white focus:outline-none focus:border-primary transition-colors"
 				>
-					{#each paymentMethodsQuery.data as pm}
+					{#each paymentMethods as pm}
 						<option value={pm._id}>
 							{pm.name}
 							{#if pm.lastFourDigits}
@@ -202,7 +284,9 @@
 
 		<!-- Category -->
 		<div>
-			<label for="category" class="block text-sm font-medium text-secondary mb-2">Category</label>
+			<label for="category" class="block text-sm font-medium text-secondary mb-2"
+				>Category</label
+			>
 			<select
 				id="category"
 				bind:value={category}
@@ -224,20 +308,31 @@
 		<div class="flex items-center justify-between p-4 bg-surface rounded-xl">
 			<div>
 				<p class="font-medium text-white">Family Plan</p>
-				<p class="text-sm text-secondary">Track slots and calculate per-person cost</p>
+				<p class="text-sm text-secondary">
+					Track slots and calculate per-person cost
+				</p>
 			</div>
 			<button
 				type="button"
 				onclick={() => (isFamilyPlan = !isFamilyPlan)}
-				class="relative w-12 h-7 rounded-full transition-colors {isFamilyPlan ? 'bg-primary' : 'bg-zinc-700'}"
+				class="relative w-12 h-7 rounded-full transition-colors {isFamilyPlan
+					? 'bg-primary'
+					: 'bg-zinc-700'}"
 			>
-				<span class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform {isFamilyPlan ? 'translate-x-5' : ''}"></span>
+				<span
+					class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform {isFamilyPlan
+						? 'translate-x-5'
+						: ''}"
+				></span>
 			</button>
 		</div>
 
 		{#if isFamilyPlan}
 			<div>
-				<label for="maxSlots" class="block text-sm font-medium text-secondary mb-2">Max Slots</label>
+				<label
+					for="maxSlots"
+					class="block text-sm font-medium text-secondary mb-2">Max Slots</label
+				>
 				<input
 					type="number"
 					id="maxSlots"
@@ -252,7 +347,9 @@
 
 		<!-- Notes -->
 		<div>
-			<label for="notes" class="block text-sm font-medium text-secondary mb-2">Notes (optional)</label>
+			<label for="notes" class="block text-sm font-medium text-secondary mb-2"
+				>Notes (optional)</label
+			>
 			<textarea
 				id="notes"
 				bind:value={notes}
