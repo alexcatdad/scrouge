@@ -1,6 +1,15 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
+
+async function getLoggedInUser(ctx: QueryCtx | MutationCtx) {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) {
+    throw new Error("User not authenticated");
+  }
+  return userId;
+}
 
 export const create = mutation({
   args: {
@@ -9,8 +18,7 @@ export const create = mutation({
   },
   returns: v.id("serviceRequests"),
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const userId = await getLoggedInUser(ctx);
 
     return await ctx.db.insert("serviceRequests", {
       serviceName: args.serviceName,
@@ -34,6 +42,8 @@ export const listPending = query({
     }),
   ),
   handler: async (ctx) => {
+    await getLoggedInUser(ctx);
+
     return await ctx.db
       .query("serviceRequests")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
