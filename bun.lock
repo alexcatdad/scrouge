@@ -16,7 +16,7 @@
         "better-auth": "1.4.9",
         "convex": "^1.31.4",
         "convex-svelte": "^0.0.12",
-        "ollama-ai-provider-v2": "^2.0.0",
+        "ollama-ai-provider-v2": "^3.0.1",
         "zod": "^4.3.5",
       },
       "devDependencies": {
@@ -394,7 +394,7 @@
 
     "obug": ["obug@2.1.1", "", {}, "sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ=="],
 
-    "ollama-ai-provider-v2": ["ollama-ai-provider-v2@2.0.0", "", { "dependencies": { "@ai-sdk/provider": "^3.0.0", "@ai-sdk/provider-utils": "^4.0.1" }, "peerDependencies": { "ai": "^5.0.0 || ^6.0.0", "zod": "^4.0.16" } }, "sha512-vbLG/xsW0kgGlInrTIa3W8niy294dw7n8nkLFVwjPHlX9EjtBH4bNPgHQEbmQUy60LjV3NF3Y1HtWPxORSb3bQ=="],
+    "ollama-ai-provider-v2": ["ollama-ai-provider-v2@3.0.1", "", { "dependencies": { "@ai-sdk/provider": "^3.0.1", "@ai-sdk/provider-utils": "^4.0.1" }, "peerDependencies": { "ai": "^5.0.0 || ^6.0.0", "zod": "^4.0.16" } }, "sha512-TLErAjK1B4JuE4I/5AwNp/DNcTKZ1cvyzgLVNDmN59WyeVB4QaphNq5wYihWTi2Uso3JLgSi+xFRCCC2dOqxFQ=="],
 
     "path-to-regexp": ["path-to-regexp@6.3.0", "", {}, "sha512-Yhpw4T9C6hPpgPeA28us07OJeqZ5EzQTkbfwuhsUg0c237RomFoETJgmp2sa3F/41gfLE6G5cqcYwznmeEeOlQ=="],
 
