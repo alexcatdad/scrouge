@@ -18,6 +18,8 @@ import {
   getGuestSubscriptions,
   getSubscriptionById,
   getActiveSubscriptions,
+  getTotalMonthlyCost,
+  getUpcomingSubscriptions,
 } from '../../src/lib/guestStore.svelte';
 import { clearGuestData } from '../../src/lib/guestStorage';
 
@@ -369,6 +371,281 @@ describe('guestStore - Subscriptions', () => {
 
     it('returns empty array when no subscriptions', () => {
       expect(getActiveSubscriptions()).toEqual([]);
+    });
+  });
+});
+
+describe('guestStore - Calculations', () => {
+  beforeEach(() => {
+    localStorageMock.clear();
+    enableGuestMode();
+  });
+
+  afterEach(() => {
+    disableGuestMode();
+    localStorageMock.clear();
+  });
+
+  describe('getTotalMonthlyCost', () => {
+    it('returns empty object when no subscriptions', () => {
+      expect(getTotalMonthlyCost()).toEqual({});
+    });
+
+    it('sums monthly subscriptions correctly', () => {
+      addSubscription({
+        name: 'Sub 1',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      addSubscription({
+        name: 'Sub 2',
+        cost: 15.50,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      const totals = getTotalMonthlyCost();
+      expect(totals['USD']).toBe(25.50);
+    });
+
+    it('converts yearly to monthly (divides by 12)', () => {
+      addSubscription({
+        name: 'Yearly Sub',
+        cost: 120,
+        currency: 'USD',
+        billingCycle: 'yearly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      const totals = getTotalMonthlyCost();
+      expect(totals['USD']).toBe(10); // 120 / 12
+    });
+
+    it('converts weekly to monthly (multiplies by 4.33)', () => {
+      addSubscription({
+        name: 'Weekly Sub',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'weekly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      const totals = getTotalMonthlyCost();
+      expect(totals['USD']).toBeCloseTo(43.3, 1); // 10 * 4.33
+    });
+
+    it('converts daily to monthly (multiplies by 30)', () => {
+      addSubscription({
+        name: 'Daily Sub',
+        cost: 1,
+        currency: 'USD',
+        billingCycle: 'daily',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      const totals = getTotalMonthlyCost();
+      expect(totals['USD']).toBe(30); // 1 * 30
+    });
+
+    it('groups by currency', () => {
+      addSubscription({
+        name: 'USD Sub',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      addSubscription({
+        name: 'EUR Sub',
+        cost: 15,
+        currency: 'EUR',
+        billingCycle: 'monthly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      const totals = getTotalMonthlyCost();
+      expect(totals['USD']).toBe(10);
+      expect(totals['EUR']).toBe(15);
+    });
+
+    it('excludes inactive subscriptions', () => {
+      addSubscription({
+        name: 'Active',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      addSubscription({
+        name: 'Inactive',
+        cost: 100,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: false,
+      });
+
+      const totals = getTotalMonthlyCost();
+      expect(totals['USD']).toBe(10);
+    });
+  });
+
+  describe('getUpcomingSubscriptions', () => {
+    it('returns subscriptions within default 7 days', () => {
+      const now = Date.now();
+      const day = 24 * 60 * 60 * 1000;
+
+      // Due in 3 days
+      addSubscription({
+        name: 'Soon',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: now + 3 * day,
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      // Due in 10 days (outside default window)
+      addSubscription({
+        name: 'Later',
+        cost: 20,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: now + 10 * day,
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      const upcoming = getUpcomingSubscriptions();
+      expect(upcoming).toHaveLength(1);
+      expect(upcoming[0].name).toBe('Soon');
+    });
+
+    it('accepts custom days parameter', () => {
+      const now = Date.now();
+      const day = 24 * 60 * 60 * 1000;
+
+      addSubscription({
+        name: 'Due in 10 days',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: now + 10 * day,
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      expect(getUpcomingSubscriptions(7)).toHaveLength(0);
+      expect(getUpcomingSubscriptions(14)).toHaveLength(1);
+    });
+
+    it('excludes inactive subscriptions', () => {
+      const now = Date.now();
+      const day = 24 * 60 * 60 * 1000;
+
+      addSubscription({
+        name: 'Active Soon',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: now + 3 * day,
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      addSubscription({
+        name: 'Inactive Soon',
+        cost: 20,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: now + 2 * day,
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: false,
+      });
+
+      const upcoming = getUpcomingSubscriptions();
+      expect(upcoming).toHaveLength(1);
+      expect(upcoming[0].name).toBe('Active Soon');
+    });
+
+    it('sorts by next billing date ascending', () => {
+      const now = Date.now();
+      const day = 24 * 60 * 60 * 1000;
+
+      // Add in reverse order
+      addSubscription({
+        name: 'Third',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: now + 5 * day,
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      addSubscription({
+        name: 'First',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: now + 1 * day,
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      addSubscription({
+        name: 'Second',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: now + 3 * day,
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      const upcoming = getUpcomingSubscriptions();
+      expect(upcoming.map(s => s.name)).toEqual(['First', 'Second', 'Third']);
     });
   });
 });
