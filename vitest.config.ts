@@ -6,8 +6,8 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     environmentMatchGlobs: [
-      // Use jsdom for tests that need browser APIs
-      ['tests/lib/guest*.test.ts', 'jsdom'],
+      // Use happy-dom for tests that need browser APIs
+      ['**/tests/lib/guest*.test.ts', 'happy-dom'],
     ],
     coverage: {
       provider: 'v8',
