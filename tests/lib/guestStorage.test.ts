@@ -318,4 +318,53 @@ describe('guestStorage', () => {
       expect(result?.paymentMethods).toHaveLength(2);
     });
   });
+
+  describe('error handling', () => {
+    it('saveGuestData handles localStorage errors gracefully', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const originalSetItem = localStorageMock.setItem;
+
+      // Make setItem throw an error
+      localStorageMock.setItem = () => {
+        throw new Error('QuotaExceededError');
+      };
+
+      const testData: GuestData = {
+        subscriptions: [],
+        paymentMethods: [],
+        isGuestMode: true,
+        createdAt: Date.now(),
+      };
+
+      // Should not throw
+      expect(() => saveGuestData(testData)).not.toThrow();
+
+      // Should log error
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to save guest data to localStorage');
+
+      // Restore
+      localStorageMock.setItem = originalSetItem;
+      consoleSpy.mockRestore();
+    });
+
+    it('clearGuestData handles localStorage errors gracefully', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const originalRemoveItem = localStorageMock.removeItem;
+
+      // Make removeItem throw an error
+      localStorageMock.removeItem = () => {
+        throw new Error('SecurityError');
+      };
+
+      // Should not throw
+      expect(() => clearGuestData()).not.toThrow();
+
+      // Should log error
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to clear guest data from localStorage');
+
+      // Restore
+      localStorageMock.removeItem = originalRemoveItem;
+      consoleSpy.mockRestore();
+    });
+  });
 });

@@ -800,5 +800,39 @@ describe('guestStore - State Management', () => {
       const found = getSubscriptionById(sub.localId);
       expect(found?.name).toBe('Find Me');
     });
+
+    it('getIsInitialized returns true after initialization', () => {
+      // initGuestStore sets initialized to true
+      initGuestStore();
+      expect(getIsInitialized()).toBe(true);
+
+      // initialized stays true even after disableGuestMode
+      // (it's a session-level flag, not a guest-mode flag)
+      disableGuestMode();
+      expect(getIsInitialized()).toBe(true);
+    });
+  });
+
+  describe('syncToStorage edge cases', () => {
+    it('does not sync to localStorage when not in guest mode', () => {
+      // Ensure not in guest mode
+      disableGuestMode();
+      expect(getIsGuestMode()).toBe(false);
+
+      // Call operation that triggers syncToStorage (without being in guest mode)
+      // This should hit the early return in syncToStorage
+      addPaymentMethod({
+        name: 'Test Card',
+        type: 'credit_card',
+        isDefault: true,
+      });
+
+      // The in-memory array should have the item
+      expect(getGuestPaymentMethods()).toHaveLength(1);
+
+      // But localStorage should NOT have guest data (because sync was skipped)
+      const stored = localStorageMock.getItem('scrouge_guest_data');
+      expect(stored).toBeNull();
+    });
   });
 });
