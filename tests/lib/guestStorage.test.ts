@@ -201,4 +201,121 @@ describe('guestStorage', () => {
       expect(result.createdAt).toBeLessThanOrEqual(after);
     });
   });
+
+  describe('data roundtrip', () => {
+    it('preserves subscription data through save/load', () => {
+      const testData: GuestData = {
+        subscriptions: [
+          {
+            localId: 'local_123_abc',
+            name: 'Netflix',
+            cost: 15.99,
+            currency: 'USD',
+            billingCycle: 'monthly',
+            nextBillingDate: Date.now() + 86400000,
+            paymentMethodLocalId: 'local_456_def',
+            category: 'streaming',
+            website: 'https://netflix.com',
+            isActive: true,
+            notes: 'Family plan',
+            maxSlots: 5,
+          },
+        ],
+        paymentMethods: [],
+        isGuestMode: true,
+        createdAt: Date.now(),
+      };
+
+      saveGuestData(testData);
+      const result = getGuestData();
+
+      expect(result?.subscriptions[0]).toEqual(testData.subscriptions[0]);
+    });
+
+    it('preserves payment method data through save/load', () => {
+      const testData: GuestData = {
+        subscriptions: [],
+        paymentMethods: [
+          {
+            localId: 'local_789_ghi',
+            name: 'Visa *1234',
+            type: 'credit_card',
+            lastFourDigits: '1234',
+            expiryDate: '12/25',
+            isDefault: true,
+          },
+        ],
+        isGuestMode: true,
+        createdAt: Date.now(),
+      };
+
+      saveGuestData(testData);
+      const result = getGuestData();
+
+      expect(result?.paymentMethods[0]).toEqual(testData.paymentMethods[0]);
+    });
+
+    it('handles multiple subscriptions and payment methods', () => {
+      const testData: GuestData = {
+        subscriptions: [
+          {
+            localId: 'local_1_a',
+            name: 'Netflix',
+            cost: 15.99,
+            currency: 'USD',
+            billingCycle: 'monthly',
+            nextBillingDate: Date.now(),
+            paymentMethodLocalId: 'local_pm_1',
+            category: 'streaming',
+            isActive: true,
+          },
+          {
+            localId: 'local_2_b',
+            name: 'Spotify',
+            cost: 9.99,
+            currency: 'USD',
+            billingCycle: 'monthly',
+            nextBillingDate: Date.now(),
+            paymentMethodLocalId: 'local_pm_1',
+            category: 'music',
+            isActive: true,
+          },
+          {
+            localId: 'local_3_c',
+            name: 'Cancelled Sub',
+            cost: 5.00,
+            currency: 'EUR',
+            billingCycle: 'yearly',
+            nextBillingDate: Date.now(),
+            paymentMethodLocalId: 'local_pm_2',
+            category: 'other',
+            isActive: false,
+          },
+        ],
+        paymentMethods: [
+          {
+            localId: 'local_pm_1',
+            name: 'Main Card',
+            type: 'credit_card',
+            lastFourDigits: '4242',
+            isDefault: true,
+          },
+          {
+            localId: 'local_pm_2',
+            name: 'PayPal',
+            type: 'paypal',
+            isDefault: false,
+          },
+        ],
+        isGuestMode: true,
+        createdAt: Date.now(),
+      };
+
+      saveGuestData(testData);
+      const result = getGuestData();
+
+      expect(result?.subscriptions).toHaveLength(3);
+      expect(result?.paymentMethods).toHaveLength(2);
+    });
+  });
 });
