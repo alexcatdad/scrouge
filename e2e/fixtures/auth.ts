@@ -12,6 +12,9 @@ if (!CONVEX_URL) {
 const CONVEX_SITE_URL = CONVEX_URL.replace(".convex.cloud", ".convex.site");
 const STORAGE_NAMESPACE = CONVEX_URL.replace(/[^a-zA-Z0-9]/g, "");
 
+// Check if we're using a placeholder URL (no real Convex backend)
+const IS_PLACEHOLDER_URL = CONVEX_URL.includes("placeholder");
+
 interface TestUser {
 	email: string;
 	tokens: {
@@ -28,6 +31,12 @@ interface AuthFixtures {
 export const test = base.extend<AuthFixtures>({
 	// Create a test user with tokens
 	testUser: async ({}, use, testInfo) => {
+		// Skip auth tests when using placeholder URL (no real Convex backend)
+		if (IS_PLACEHOLDER_URL) {
+			testInfo.skip(true, "Auth tests require a real Convex backend (using placeholder URL)");
+			return;
+		}
+
 		const email = `e2e-${testInfo.testId}-${Date.now()}@test.local`;
 		const password = "TestPassword123!";
 
