@@ -7,7 +7,7 @@ when:
 
 variables:
   - &node_image "oven/bun:latest"
-  - &playwright_image "mcr.microsoft.com/playwright:v1.49.1-noble"
+  - &playwright_image "mcr.microsoft.com/playwright:v1.57.0-noble"
 
 # Clone with full history for better caching
 clone:
