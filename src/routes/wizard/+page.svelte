@@ -4,15 +4,42 @@
 	import { goto } from "$app/navigation";
 	import { onMount, getContext } from "svelte";
 	import type { Id } from "$convex/_generated/dataModel";
+	import {
+		getIsGuestMode,
+		getGuestPaymentMethods,
+		getDefaultPaymentMethod,
+		addPaymentMethod as addGuestPaymentMethod,
+		addSubscription as addGuestSubscription,
+	} from "$lib/guestStore.svelte";
 
 	// Get wizard context from layout
 	const wizard = getContext<{ step: number; setStep: (step: number) => void }>("wizard");
 
 	const client = useConvexClient();
 
+	// Check if in guest mode
+	const isGuestMode = $derived(getIsGuestMode());
+
 	// Queries
 	const templatesQuery = useQuery(api.templates.search, { query: "" });
+	// Only query Convex for payment methods when not in guest mode
 	const paymentMethodsQuery = useQuery(api.paymentMethods.list, {});
+
+	// Guest mode payment methods
+	const guestPaymentMethods = $derived(getGuestPaymentMethods());
+
+	// Unified payment methods accessor
+	const paymentMethods = $derived(
+		isGuestMode
+			? guestPaymentMethods.map((pm) => ({
+					_id: pm.localId as Id<"paymentMethods">,
+					name: pm.name,
+					type: pm.type,
+					lastFourDigits: pm.lastFourDigits,
+					isDefault: pm.isDefault,
+				}))
+			: (paymentMethodsQuery.data ?? [])
+	);
 
 	// Wizard state
 	let searchQuery = $state("");
@@ -107,6 +134,10 @@
 
 	// Get default payment method ID
 	const defaultPaymentMethodId = $derived(() => {
+		if (isGuestMode) {
+			const defaultPm = getDefaultPaymentMethod();
+			return defaultPm?.localId ?? (guestPaymentMethods[0]?.localId ?? "");
+		}
 		if (!paymentMethodsQuery.data || paymentMethodsQuery.data.length === 0) return "";
 		const defaultMethod = paymentMethodsQuery.data.find((pm) => pm.isDefault);
 		return defaultMethod?._id ?? paymentMethodsQuery.data[0]._id;
@@ -225,15 +256,28 @@
 
 		isCreatingPaymentMethod = true;
 		try {
-			const newId = await client.mutation(api.paymentMethods.create, {
-				name: newPaymentMethodName,
-				type: newPaymentMethodType,
-				isDefault: true,
-			});
+			let newId: string;
+
+			if (isGuestMode) {
+				// Create payment method in guest store
+				const newPm = addGuestPaymentMethod({
+					name: newPaymentMethodName,
+					type: newPaymentMethodType,
+					isDefault: true,
+				});
+				newId = newPm.localId;
+			} else {
+				// Create payment method in Convex
+				newId = await client.mutation(api.paymentMethods.create, {
+					name: newPaymentMethodName,
+					type: newPaymentMethodType,
+					isDefault: true,
+				});
+			}
 
 			// Update all subscriptions to use this new payment method
 			for (const [, sub] of selectedTemplates) {
-				sub.paymentMethodId = newId;
+				sub.paymentMethodId = newId as Id<"paymentMethods">;
 			}
 			selectedTemplates = new Map(selectedTemplates);
 
@@ -259,24 +303,51 @@
 		error = "";
 
 		try {
-			const subscriptions = Array.from(selectedTemplates.values()).map((sub) => ({
-				name: sub.name,
-				cost: sub.cost,
-				currency: sub.currency,
-				billingCycle: sub.billingCycle,
-				nextBillingDate: new Date(sub.nextBillingDate).getTime(),
-				paymentMethodId: sub.paymentMethodId as Id<"paymentMethods">,
-				category: sub.category,
-				website: sub.website,
-			}));
+			if (isGuestMode) {
+				// Create subscriptions in guest store
+				let count = 0;
+				for (const sub of selectedTemplates.values()) {
+					addGuestSubscription({
+						name: sub.name,
+						cost: sub.cost,
+						currency: sub.currency,
+						billingCycle: sub.billingCycle,
+						nextBillingDate: new Date(sub.nextBillingDate).getTime(),
+						paymentMethodLocalId: sub.paymentMethodId as string,
+						category: sub.category,
+						website: sub.website,
+						isActive: true,
+					});
+					count++;
+				}
 
-			const result = await client.mutation(api.subscriptions.batchCreate, { subscriptions });
+				// Success!
+				successData = {
+					count,
+					total: Math.round(totalMonthlyCost() * 100) / 100,
+				};
+			} else {
+				// Create subscriptions in Convex
+				const subscriptions = Array.from(selectedTemplates.values()).map((sub) => ({
+					name: sub.name,
+					cost: sub.cost,
+					currency: sub.currency,
+					billingCycle: sub.billingCycle,
+					nextBillingDate: new Date(sub.nextBillingDate).getTime(),
+					paymentMethodId: sub.paymentMethodId as Id<"paymentMethods">,
+					category: sub.category,
+					website: sub.website,
+				}));
 
-			// Success!
-			successData = {
-				count: result.created,
-				total: Math.round(totalMonthlyCost() * 100) / 100,
-			};
+				const result = await client.mutation(api.subscriptions.batchCreate, { subscriptions });
+
+				// Success!
+				successData = {
+					count: result.created,
+					total: Math.round(totalMonthlyCost() * 100) / 100,
+				};
+			}
+
 			wizard?.setStep(3);
 
 			// Clear persisted state
@@ -396,17 +467,23 @@
 								{#if template.website}
 									<img
 										src={getIconUrl(template.website)}
-										alt=""
+										alt={template.name}
 										class="w-10 h-10 object-contain"
 										onerror={(e) => {
 											const target = e.target as HTMLImageElement;
 											target.style.display = "none";
+											const fallback = target.nextElementSibling as HTMLElement;
+											if (fallback) fallback.style.display = "flex";
 										}}
 									/>
+									<span class="text-xl font-bold text-primary hidden">
+										{template.name.charAt(0).toUpperCase()}
+									</span>
+								{:else}
+									<span class="text-xl font-bold text-primary">
+										{template.name.charAt(0).toUpperCase()}
+									</span>
 								{/if}
-								<span class="text-xl font-bold text-primary">
-									{template.name.charAt(0).toUpperCase()}
-								</span>
 							</div>
 							<span class="text-xs text-center text-secondary line-clamp-2">
 								{template.name}
@@ -461,7 +538,7 @@
 			{/if}
 
 			<!-- Payment Method Check -->
-			{#if paymentMethodsQuery.data && paymentMethodsQuery.data.length === 0 && !showPaymentMethodForm}
+			{#if paymentMethods.length === 0 && !showPaymentMethodForm}
 				<div class="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
 					<p class="text-yellow-400 text-sm mb-3">You need a payment method to track subscriptions</p>
 					<button
@@ -531,17 +608,23 @@
 									{#if sub.website}
 										<img
 											src={getIconUrl(sub.website)}
-											alt=""
+											alt={sub.name}
 											class="w-8 h-8 object-contain"
 											onerror={(e) => {
 												const target = e.target as HTMLImageElement;
 												target.style.display = "none";
+												const fallback = target.nextElementSibling as HTMLElement;
+												if (fallback) fallback.style.display = "flex";
 											}}
 										/>
+										<span class="text-lg font-bold text-primary hidden">
+											{sub.name.charAt(0).toUpperCase()}
+										</span>
+									{:else}
+										<span class="text-lg font-bold text-primary">
+											{sub.name.charAt(0).toUpperCase()}
+										</span>
 									{/if}
-									<span class="text-lg font-bold text-primary">
-										{sub.name.charAt(0).toUpperCase()}
-									</span>
 								</div>
 								<div>
 									<p class="font-medium text-white">{sub.name}</p>
@@ -628,7 +711,7 @@
 							<!-- Payment Method -->
 							<div>
 								<label class="block text-sm text-secondary mb-2">Payment Method</label>
-								{#if paymentMethodsQuery.data && paymentMethodsQuery.data.length > 0}
+								{#if paymentMethods.length > 0}
 									<select
 										value={sub.paymentMethodId}
 										onchange={(e) =>
@@ -639,7 +722,7 @@
 											)}
 										class="w-full px-3 py-2 bg-zinc-800 border border-zinc-600 rounded-lg text-white focus:outline-none focus:border-primary transition-colors"
 									>
-										{#each paymentMethodsQuery.data as pm}
+										{#each paymentMethods as pm}
 											<option value={pm._id}>
 												{pm.name}
 												{#if pm.lastFourDigits}(*{pm.lastFourDigits}){/if}
@@ -677,7 +760,7 @@
 			<div class="max-w-2xl mx-auto">
 				<button
 					onclick={handleSubmit}
-					disabled={isSubmitting || selectedTemplates.size === 0 || (paymentMethodsQuery.data?.length === 0)}
+					disabled={isSubmitting || selectedTemplates.size === 0 || paymentMethods.length === 0}
 					class="w-full py-4 bg-primary hover:bg-primary-hover disabled:bg-zinc-700 disabled:text-zinc-500 text-black font-medium rounded-xl transition-colors"
 				>
 					{#if isSubmitting}

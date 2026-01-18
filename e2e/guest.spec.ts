@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures/coverage";
 import { test as guestTest, expect as guestExpect } from "./fixtures/guest";
 
 test.describe("Guest Mode - Entry", () => {

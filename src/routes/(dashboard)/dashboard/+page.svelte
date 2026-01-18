@@ -216,17 +216,23 @@
 								{#if sub.website}
 									<img
 										src={getIconUrl(sub.website)}
-										alt=""
+										alt={sub.name}
 										class="w-7 h-7 object-contain"
 										onerror={(e) => {
 											const target = e.target as HTMLImageElement;
 											target.style.display = "none";
+											const fallback = target.nextElementSibling as HTMLElement;
+											if (fallback) fallback.style.display = "flex";
 										}}
 									/>
+									<span class="text-sm font-bold text-primary hidden">
+										{sub.name.charAt(0).toUpperCase()}
+									</span>
+								{:else}
+									<span class="text-sm font-bold text-primary">
+										{sub.name.charAt(0).toUpperCase()}
+									</span>
 								{/if}
-								<span class="text-sm font-bold text-primary">
-									{sub.name.charAt(0).toUpperCase()}
-								</span>
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="font-medium text-white truncate">{sub.name}</p>
@@ -286,17 +292,23 @@
 								{#if alert.website}
 									<img
 										src={getIconUrl(alert.website)}
-										alt=""
+										alt={alert.name}
 										class="w-7 h-7 object-contain"
 										onerror={(e) => {
 											const target = e.target as HTMLImageElement;
 											target.style.display = "none";
+											const fallback = target.nextElementSibling as HTMLElement;
+											if (fallback) fallback.style.display = "flex";
 										}}
 									/>
+									<span class="text-sm font-bold text-primary hidden">
+										{alert.name.charAt(0).toUpperCase()}
+									</span>
+								{:else}
+									<span class="text-sm font-bold text-primary">
+										{alert.name.charAt(0).toUpperCase()}
+									</span>
 								{/if}
-								<span class="text-sm font-bold text-primary">
-									{alert.name.charAt(0).toUpperCase()}
-								</span>
 							</div>
 							<div class="flex-1 min-w-0">
 								<p class="font-medium text-white truncate">{alert.name}</p>

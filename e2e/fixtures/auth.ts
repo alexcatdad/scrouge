@@ -1,4 +1,4 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect, collectCoverage } from "./coverage";
 import type { Page } from "@playwright/test";
 
 // Get Convex URL from environment (loaded via dotenv in playwright.config.ts)
@@ -75,7 +75,7 @@ export const test = base.extend<AuthFixtures>({
 	},
 
 	// Page with auth tokens pre-injected
-	authenticatedPage: async ({ page, testUser }, use) => {
+	authenticatedPage: async ({ page, testUser }, use, testInfo) => {
 		// Inject tokens into localStorage before any navigation
 		await page.addInitScript(
 			({ namespace, token, refreshToken }) => {
@@ -90,6 +90,9 @@ export const test = base.extend<AuthFixtures>({
 		);
 
 		await use(page);
+
+		// Collect coverage
+		await collectCoverage(page, testInfo.testId);
 	},
 });
 

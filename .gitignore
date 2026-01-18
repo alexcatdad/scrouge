@@ -30,3 +30,5 @@ vite.config.ts.timestamp-*
 
 # Coverage
 /coverage/
+/coverage-e2e/
+/.nyc_output/

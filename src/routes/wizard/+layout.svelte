@@ -4,6 +4,11 @@
 	import { goto } from "$app/navigation";
 	import { onMount, setContext } from "svelte";
 	import { PUBLIC_CONVEX_URL } from "$env/static/public";
+	import {
+		getIsGuestMode,
+		initGuestStore,
+		hasGuestData,
+	} from "$lib/guestStore.svelte";
 
 	const { children } = $props();
 
@@ -25,23 +30,32 @@
 	const userQuery = useQuery(api.auth.loggedInUser, {});
 	const namespace = PUBLIC_CONVEX_URL.replace(/[^a-zA-Z0-9]/g, "");
 
-	// Track auth state
+	// Track auth and guest mode state
 	let isChecking = $state(true);
+	const isGuestMode = $derived(getIsGuestMode());
 
 	onMount(() => {
+		// Initialize guest store from localStorage
+		initGuestStore();
+
 		// Check localStorage for auth token
 		const token = localStorage.getItem(`__convexAuthJWT_${namespace}`);
 
-		if (!token) {
-			goto("/sign-in");
-		} else {
+		if (token) {
+			// Authenticated user
 			isChecking = false;
+		} else if (hasGuestData()) {
+			// Guest mode user - allow access
+			isChecking = false;
+		} else {
+			// No auth and no guest data - redirect to sign-in
+			goto("/sign-in");
 		}
 	});
 
-	// Redirect if user becomes unauthenticated
+	// Redirect if user becomes unauthenticated (but not if in guest mode)
 	$effect(() => {
-		if (!isChecking && userQuery.data === null && !userQuery.isLoading) {
+		if (!isChecking && !isGuestMode && userQuery.data === null && !userQuery.isLoading) {
 			goto("/sign-in");
 		}
 	});

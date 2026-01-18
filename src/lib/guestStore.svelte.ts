@@ -12,7 +12,11 @@ import {
 	clearGuestData as clearStorage,
 	generateLocalId,
 	initGuestData,
+	hasGuestData,
 } from "./guestStorage";
+
+// Re-export hasGuestData for convenience
+export { hasGuestData };
 
 // Reactive state using Svelte 5 runes
 let isGuestMode = $state(false);

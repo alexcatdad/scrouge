@@ -1,4 +1,4 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect, collectCoverage } from "./coverage";
 import type { Page } from "@playwright/test";
 
 interface GuestFixtures {
@@ -7,7 +7,7 @@ interface GuestFixtures {
 
 export const test = base.extend<GuestFixtures>({
   // Page with guest mode pre-enabled via localStorage
-  guestPage: async ({ page }, use) => {
+  guestPage: async ({ page }, use, testInfo) => {
     // Inject guest mode data into localStorage before navigation
     await page.addInitScript(() => {
       const guestData = {
@@ -20,6 +20,9 @@ export const test = base.extend<GuestFixtures>({
     });
 
     await use(page);
+
+    // Collect coverage for guestPage as well
+    await collectCoverage(page, testInfo.testId);
   },
 });
 

@@ -102,17 +102,23 @@
 					{#if templateQuery.data.website}
 						<img
 							src={getIconUrl(templateQuery.data.website)}
-							alt=""
+							alt={templateQuery.data.name}
 							class="w-8 h-8 object-contain"
 							onerror={(e) => {
 								const target = e.target as HTMLImageElement;
 								target.style.display = "none";
+								const fallback = target.nextElementSibling as HTMLElement;
+								if (fallback) fallback.style.display = "flex";
 							}}
 						/>
+						<span class="text-lg font-bold text-primary hidden">
+							{templateQuery.data.name.charAt(0).toUpperCase()}
+						</span>
+					{:else}
+						<span class="text-lg font-bold text-primary">
+							{templateQuery.data.name.charAt(0).toUpperCase()}
+						</span>
 					{/if}
-					<span class="text-lg font-bold text-primary">
-						{templateQuery.data.name.charAt(0).toUpperCase()}
-					</span>
 				</div>
 				<h1 class="text-xl font-bold text-white">{templateQuery.data.name}</h1>
 			</div>

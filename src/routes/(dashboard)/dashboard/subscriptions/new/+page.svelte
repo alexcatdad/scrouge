@@ -124,17 +124,23 @@
 						{#if template.website}
 							<img
 								src={getIconUrl(template.website)}
-								alt=""
+								alt={template.name}
 								class="w-10 h-10 object-contain"
 								onerror={(e) => {
 									const target = e.target as HTMLImageElement;
 									target.style.display = "none";
+									const fallback = target.nextElementSibling as HTMLElement;
+									if (fallback) fallback.style.display = "flex";
 								}}
 							/>
+							<span class="text-xl font-bold text-primary hidden">
+								{template.name.charAt(0).toUpperCase()}
+							</span>
+						{:else}
+							<span class="text-xl font-bold text-primary">
+								{template.name.charAt(0).toUpperCase()}
+							</span>
 						{/if}
-						<span class="text-xl font-bold text-primary">
-							{template.name.charAt(0).toUpperCase()}
-						</span>
 					</div>
 					<span class="text-xs text-center text-secondary group-hover:text-white transition-colors line-clamp-2">
 						{template.name}

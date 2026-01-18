@@ -127,17 +127,23 @@
 							{#if subscription.website}
 								<img
 									src={getIconUrl(subscription.website)}
-									alt=""
+									alt={subscription.name}
 									class="w-8 h-8 object-contain"
 									onerror={(e) => {
 										const target = e.target as HTMLImageElement;
 										target.style.display = "none";
+										const fallback = target.nextElementSibling as HTMLElement;
+										if (fallback) fallback.style.display = "flex";
 									}}
 								/>
+								<span class="text-lg font-bold text-primary hidden">
+									{subscription.name.charAt(0).toUpperCase()}
+								</span>
+							{:else}
+								<span class="text-lg font-bold text-primary">
+									{subscription.name.charAt(0).toUpperCase()}
+								</span>
 							{/if}
-							<span class="text-lg font-bold text-primary">
-								{subscription.name.charAt(0).toUpperCase()}
-							</span>
 						</div>
 
 						<!-- Details -->
