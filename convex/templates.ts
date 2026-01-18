@@ -105,6 +105,27 @@ export const get = query({
   },
 });
 
+// Fix icons to use Google favicon service
+export const fixIcons = internalMutation({
+  args: {},
+  returns: v.object({ updated: v.number() }),
+  handler: async (ctx) => {
+    const templates = await ctx.db.query("serviceTemplates").collect();
+    let updated = 0;
+
+    for (const template of templates) {
+      if (template.website && template.icon?.includes("clearbit")) {
+        await ctx.db.patch(template._id, {
+          icon: `https://www.google.com/s2/favicons?domain=${template.website}&sz=128`,
+        });
+        updated++;
+      }
+    }
+
+    return { updated };
+  },
+});
+
 // Seed data - 100+ popular services
 const SEED_DATA: Array<{
   name: string;
@@ -267,7 +288,7 @@ export const seed = internalMutation({
         name: template.name,
         category: template.category,
         website: template.website,
-        icon: `https://logo.clearbit.com/${template.website}`,
+        icon: `https://www.google.com/s2/favicons?domain=${template.website}&sz=128`,
         defaultPrice: template.defaultPrice,
         defaultCurrency: template.defaultCurrency,
         defaultBillingCycle: template.defaultBillingCycle,
