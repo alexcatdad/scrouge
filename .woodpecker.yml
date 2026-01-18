@@ -5,15 +5,13 @@ when:
   - event: push
     branch: main
   - event: pull_request
-    branch: main
-    exclude:
-      branch: renovate/*
+    branch:
+      exclude: [renovate/*]
 
 variables:
   - &node_image "oven/bun:latest"
   - &playwright_image "mcr.microsoft.com/playwright:v1.57.0-noble"
 
-# Clone with full history for better caching
 clone:
   git:
     image: woodpeckerci/plugin-git
@@ -22,7 +20,7 @@ clone:
 
 steps:
   # ============================================
-  # Quality Gate: Type Check and Unit Tests
+  # Quality Gate: Type Check
   # ============================================
   typecheck:
     image: *node_image
@@ -31,8 +29,6 @@ steps:
     commands:
       - bun install
       - bun run check
-    when:
-      - event: [push, pull_request]
 
   # Unit tests with coverage (requires Node.js for v8 coverage)
   unit-tests:
@@ -43,8 +39,6 @@ steps:
       - npm install -g bun
       - bun install
       - npx vitest run --coverage
-    when:
-      - event: [push, pull_request]
     depends_on:
       - typecheck
 
@@ -57,8 +51,6 @@ steps:
     commands:
       - bun install
       - bunx audit-ci --config audit-ci.json || true
-    when:
-      - event: [push, pull_request]
 
   # ============================================
   # E2E Tests (parallelized with sharding)
@@ -118,7 +110,5 @@ steps:
     commands:
       - bun install
       - bun run build
-    when:
-      - event: [push, pull_request]
     depends_on:
       - unit-tests
