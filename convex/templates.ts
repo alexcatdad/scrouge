@@ -31,6 +31,7 @@ export const list = query({
   returns: v.array(
     v.object({
       _id: v.id("serviceTemplates"),
+      _creationTime: v.number(),
       name: v.string(),
       category: categoryValidator,
       website: v.optional(v.string()),
@@ -59,6 +60,7 @@ export const search = query({
   returns: v.array(
     v.object({
       _id: v.id("serviceTemplates"),
+      _creationTime: v.number(),
       name: v.string(),
       category: categoryValidator,
       website: v.optional(v.string()),
@@ -87,6 +89,7 @@ export const get = query({
   returns: v.union(
     v.object({
       _id: v.id("serviceTemplates"),
+      _creationTime: v.number(),
       name: v.string(),
       category: categoryValidator,
       website: v.optional(v.string()),
