@@ -38,20 +38,16 @@
 	const isGuestMode = $derived(getIsGuestMode());
 
 	onMount(() => {
-		// Initialize guest store first
 		initGuestStore();
 
-		// Check localStorage for auth token
 		const token = localStorage.getItem(`__convexAuthJWT_${namespace}`);
 
 		if (token) {
 			isAuthenticated = true;
 			isChecking = false;
 		} else if (hasGuestData()) {
-			// Allow guest mode access
 			isChecking = false;
 		} else {
-			// No auth and no guest data - redirect to sign-in
 			goto("/sign-in");
 		}
 	});
@@ -115,13 +111,13 @@
 	$effect(() => {
 		if (
 			!isChecking &&
+			!isAuthenticated &&
 			userQuery.data === null &&
 			!userQuery.isLoading &&
 			!isGuestMode
 		) {
 			goto("/sign-in");
 		}
-		// Update authenticated state when query resolves
 		if (userQuery.data !== null && userQuery.data !== undefined) {
 			isAuthenticated = true;
 		}

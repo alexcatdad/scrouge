@@ -3,6 +3,7 @@
 	import { api } from "$convex/_generated/api";
 	import { goto } from "$app/navigation";
 	import { PUBLIC_CONVEX_URL } from "$env/static/public";
+	import { onMount } from "svelte";
 
 	let email = $state("");
 	let password = $state("");
@@ -11,6 +12,14 @@
 
 	const client = useConvexClient();
 	const namespace = PUBLIC_CONVEX_URL.replace(/[^a-zA-Z0-9]/g, "");
+
+	// Redirect to dashboard if already authenticated
+	onMount(() => {
+		const token = localStorage.getItem(`__convexAuthJWT_${namespace}`);
+		if (token) {
+			goto("/dashboard");
+		}
+	});
 
 	async function handleEmailSignIn(e: SubmitEvent) {
 		e.preventDefault();
@@ -24,7 +33,6 @@
 			});
 
 			if (result.tokens) {
-				// Store tokens in localStorage
 				localStorage.setItem(`__convexAuthJWT_${namespace}`, result.tokens.token);
 				localStorage.setItem(`__convexAuthRefreshToken_${namespace}`, result.tokens.refreshToken);
 				goto("/dashboard");

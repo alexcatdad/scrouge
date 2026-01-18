@@ -3,6 +3,7 @@
 	import { api } from "$convex/_generated/api";
 	import { goto } from "$app/navigation";
 	import { PUBLIC_CONVEX_URL } from "$env/static/public";
+	import { onMount } from "svelte";
 	import {
 		getAllGuestDataForMigration,
 		getIsGuestMode,
@@ -19,6 +20,14 @@
 
 	const client = useConvexClient();
 	const namespace = PUBLIC_CONVEX_URL.replace(/[^a-zA-Z0-9]/g, "");
+
+	// Redirect to dashboard if already authenticated
+	onMount(() => {
+		const token = localStorage.getItem(`__convexAuthJWT_${namespace}`);
+		if (token) {
+			goto("/dashboard");
+		}
+	});
 
 	// Check if user has guest data to migrate
 	const hasGuestDataToMigrate = $derived(getIsGuestMode());
