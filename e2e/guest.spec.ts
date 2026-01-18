@@ -146,3 +146,39 @@ guestTest.describe("Guest Mode - Subscriptions", () => {
     await guestExpect(guestPage.locator("text=Add manually")).toBeVisible();
   });
 });
+
+guestTest.describe("Guest Mode - Exit", () => {
+  guestTest("guest sees Exit Guest Mode button", async ({ guestPage }) => {
+    await guestPage.goto("/dashboard");
+
+    // Should see the exit button in header
+    await guestExpect(guestPage.locator("text=Exit Guest Mode")).toBeVisible();
+  });
+
+  guestTest("guest sees sign up link in banner", async ({ guestPage }) => {
+    await guestPage.goto("/dashboard");
+
+    // Should see sign up to save link in the guest mode banner
+    await guestExpect(guestPage.locator("a:has-text('Sign up to save')")).toBeVisible();
+  });
+
+  guestTest("clicking Exit Guest Mode redirects to landing page", async ({ guestPage }) => {
+    await guestPage.goto("/dashboard");
+
+    // Click the exit button
+    await guestPage.click("text=Exit Guest Mode");
+
+    // Should redirect to landing page
+    await guestExpect(guestPage).toHaveURL("/");
+  });
+
+  guestTest("sign up link goes to sign up page", async ({ guestPage }) => {
+    await guestPage.goto("/dashboard");
+
+    // Click sign up link
+    await guestPage.click("a:has-text('Sign up to save')");
+
+    // Should navigate to sign up page
+    await guestExpect(guestPage).toHaveURL(/sign-up/);
+  });
+});
