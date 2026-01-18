@@ -40,7 +40,8 @@ jobs:
       - name: Type check
         run: bun run check
         env:
-          PUBLIC_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
+          # Placeholder URL for type checking (guest mode doesn't need real Convex)
+          PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
 
       - name: Run unit tests with coverage
         run: bun run test:coverage
@@ -128,7 +129,8 @@ jobs:
       - name: Run E2E tests with coverage
         run: bun run test:e2e:coverage
         env:
-          PUBLIC_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
+          # Placeholder URL for E2E tests (guest mode doesn't need real Convex)
+          PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
 
       - name: Upload E2E coverage
         uses: actions/upload-artifact@v6
@@ -175,7 +177,8 @@ jobs:
       - name: Build application
         run: bun run build
         env:
-          VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
+          # Placeholder URL for build verification (guest mode doesn't need real Convex)
+          PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v6
