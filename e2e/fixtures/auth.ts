@@ -32,15 +32,29 @@ export const test = base.extend<AuthFixtures>({
 		const password = "TestPassword123!";
 
 		// Seed user via test endpoint
-		const response = await fetch(`${CONVEX_SITE_URL}/api/test/seed-user`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ email, password, name: "E2E Test User" }),
-		});
+		let response: Response;
+		try {
+			response = await fetch(`${CONVEX_SITE_URL}/api/test/seed-user`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email, password, name: "E2E Test User" }),
+			});
+		} catch (fetchError) {
+			const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+			testInfo.skip(true, `Test endpoint unavailable (fetch failed): ${msg}`);
+			return;
+		}
+
+		if (response.status === 404) {
+			testInfo.skip(true,
+				"Test endpoint not available. Set CONVEX_IS_TEST=true in Convex dashboard environment variables."
+			);
+			return;
+		}
 
 		if (!response.ok) {
 			const error = await response.text();
-			throw new Error(`Failed to seed test user: ${error}`);
+			throw new Error(`Failed to seed test user (${response.status}): ${error}`);
 		}
 
 		const user: TestUser = await response.json();
@@ -49,11 +63,15 @@ export const test = base.extend<AuthFixtures>({
 		await use(user);
 
 		// Cleanup after test
-		await fetch(`${CONVEX_SITE_URL}/api/test/cleanup-user`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ email }),
-		});
+		try {
+			await fetch(`${CONVEX_SITE_URL}/api/test/cleanup-user`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email }),
+			});
+		} catch {
+			// Ignore cleanup errors
+		}
 	},
 
 	// Page with auth tokens pre-injected

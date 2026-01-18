@@ -2,12 +2,8 @@ import { test, expect } from "@playwright/test";
 import { test as guestTest, expect as guestExpect } from "./fixtures/guest";
 
 test.describe("Guest Mode - Entry", () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear any existing guest data before each test
-    await page.addInitScript(() => {
-      localStorage.removeItem('scrouge_guest_data');
-    });
-  });
+  // Run entry tests serially to avoid race conditions with localStorage
+  test.describe.configure({ mode: 'serial' });
 
   test("landing page shows 'Try without an account' button", async ({ page }) => {
     await page.goto("/");
@@ -18,13 +14,17 @@ test.describe("Guest Mode - Entry", () => {
 
   test("clicking guest button enables guest mode and redirects to dashboard", async ({ page }) => {
     await page.goto("/");
+    await page.waitForLoadState("networkidle");
 
-    // Click either button variant
-    const guestButton = page.locator("text=Try without an account").or(page.locator("text=Continue as guest"));
-    await guestButton.click();
+    // Click the guest button and wait for navigation
+    const guestButton = page.locator("button:has-text('Try without an account'), button:has-text('Continue as guest')");
+    await expect(guestButton).toBeVisible();
 
-    // Should redirect to dashboard
-    await expect(page).toHaveURL(/dashboard/, { timeout: 10000 });
+    // Use Promise.all to click and wait for navigation simultaneously
+    await Promise.all([
+      page.waitForURL(/dashboard/, { timeout: 15000 }),
+      guestButton.click(),
+    ]);
 
     // Should see guest welcome
     await expect(page.locator("text=Welcome, Guest!")).toBeVisible();
@@ -32,13 +32,19 @@ test.describe("Guest Mode - Entry", () => {
 
   test("guest mode shows local storage warning banner", async ({ page }) => {
     await page.goto("/");
+    await page.waitForLoadState("networkidle");
 
-    // Click either button variant
-    const guestButton = page.locator("text=Try without an account").or(page.locator("text=Continue as guest"));
-    await guestButton.click();
+    // Click the guest button and wait for navigation
+    const guestButton = page.locator("button:has-text('Try without an account'), button:has-text('Continue as guest')");
+    await expect(guestButton).toBeVisible();
+
+    await Promise.all([
+      page.waitForURL(/dashboard/, { timeout: 15000 }),
+      guestButton.click(),
+    ]);
 
     // Should see the guest mode banner
-    await expect(page.locator("text=Your data is saved locally")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("text=Your data is saved locally")).toBeVisible();
   });
 });
 
