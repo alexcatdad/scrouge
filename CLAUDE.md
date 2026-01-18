@@ -9,68 +9,88 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 bun run dev
 
 # Run Convex backend separately
-bun run dev:backend    # Convex backend (convex dev)
+bunx convex dev         # Convex backend
 
 # Build for production
-bun run build          # Vite production build (outputs to dist/)
+bun run build           # SvelteKit production build (outputs to build/)
 
 # Preview production build locally
-bun run preview        # Vite preview server
+bun run preview         # Vite preview server
 
-# Serve production build with Bun
-bun run serve          # Bun server serving dist/
+# Lint and format
+bun run check           # Svelte + TypeScript checking
+bun run check:watch     # Watch mode
 
-# Lint and format (Biome + TypeScript)
-bun run lint           # Runs Biome check + tsc on both convex/ and src/
-bun run lint:fix       # Auto-fix linting and formatting issues
-bun run format         # Format code with Biome
-bun run typecheck      # TypeScript type checking only
+# Testing
+bun run test            # Run unit tests (Vitest)
+bun run test:e2e        # Run E2E tests (Playwright)
+bun run test:e2e:ui     # Run E2E tests with UI
 ```
 
 ## Architecture
 
-This is a subscription tracking app built with **Vite + Bun + Convex + React**.
+This is a subscription tracking app built with **SvelteKit + Convex + Better Auth**.
 
 ### Stack
-- **Build Tool**: Vite (development server + production bundler)
-- **Runtime**: Bun (production server)
+- **Framework**: SvelteKit 2 with Svelte 5
+- **Build Tool**: Vite 7 (via SvelteKit)
+- **Runtime**: Node.js (adapter-node for production)
 - **Backend**: Convex (serverless database + functions)
-- **Frontend**: React 19 with Tailwind CSS v4
-- **Auth**: @convex-dev/auth (password, anonymous, GitHub OAuth, Authentik OIDC)
+- **Auth**: @convex-dev/better-auth with better-auth (password, GitHub OAuth, Authentik OIDC)
+- **Styling**: Tailwind CSS v4
 - **AI**: Vercel AI SDK with multiple providers (OpenAI, xAI, Mistral, Ollama)
-- **Env Validation**: @t3-oss/env-core with Zod
 
 ### Directory Structure
 ```
-index.ts          # Bun production server - serves Vite build output
-index.html        # Entry point - loads src/main.tsx
+svelte.config.js  # SvelteKit configuration (adapter-node)
 vite.config.ts    # Vite configuration
 src/
-  App.tsx         # Main app component with auth state
-  SignInForm.tsx  # Multi-provider auth form
-  main.tsx        # React entry point with Convex client
-  components/     # Feature components (Dashboard, Chat, Subscriptions, etc.)
+  app.html        # HTML template
+  app.css         # Tailwind source CSS
+  app.d.ts        # TypeScript declarations
+  routes/
+    +layout.svelte      # Root layout with Convex provider
+    +layout.ts          # Layout data loader
+    +page.svelte        # Landing page
+    health/+server.ts   # Health check endpoint for Docker
+    (auth)/             # Auth routes (sign-in, sign-up)
+    (dashboard)/        # Protected dashboard routes
+    wizard/             # Onboarding wizard
   lib/
-    env.ts        # Type-safe environment variables (t3-env)
-    monitoring.ts # Error monitoring (console-only)
-  index.css       # Tailwind source CSS
-  vite-env.d.ts   # TypeScript declarations for import.meta.env
+    auth-client.ts      # Better Auth client
+    auth.ts             # Auth utilities
+    guestStorage.ts     # Guest mode localStorage
+    guestStore.svelte.ts # Guest mode Svelte store
 convex/
   schema.ts       # Database schema (extends authTables)
-  auth.ts         # Auth configuration
-  http.ts         # HTTP router (auth routes only - don't modify)
-  router.ts       # User-defined HTTP routes (modify this one)
-  chat.ts         # AI chat with tool calling
+  auth.ts         # Better Auth server configuration
+  http.ts         # HTTP router (mounts auth + custom routes)
+  router.ts       # User-defined HTTP routes (MCP API, invites, tests)
   subscriptions.ts, paymentMethods.ts, aiSettings.ts  # CRUD operations
-  lib/encryption.ts  # API key encryption utilities
-dist/             # Vite build output (generated)
+  serviceRequests.ts  # Service template requests (admin features)
+  admin.ts        # Admin role management
+  lib/
+    encryption.ts # API key encryption utilities
+    rateLimit.ts  # Rate limiting
+    admin.ts      # Admin authorization helpers
+build/            # SvelteKit build output (generated)
+tests/            # Unit tests (Vitest)
+e2e/              # E2E tests (Playwright)
 ```
 
 ### Key Patterns
 
-**Environment Variables**: Uses `@t3-oss/env-core` for type-safe, validated environment variables via Vite's `import.meta.env`. See `src/lib/env.ts` for the schema.
+**SvelteKit Routes**: File-based routing with `+page.svelte` for pages, `+server.ts` for API endpoints, `+layout.svelte` for layouts.
 
-**Vite Build**: Development uses Vite's dev server with HMR. Production builds are bundled by Vite and served by the Bun server (`index.ts`).
+**Svelte 5 Runes**: Uses `$state`, `$derived`, `$effect` for reactivity. Props via `$props()`.
+
+**Convex Integration**: Uses `convex-svelte` package. Setup in root layout:
+```svelte
+<script lang="ts">
+  import { setupConvex } from "convex-svelte";
+  setupConvex(data.convexUrl);
+</script>
+```
 
 **Convex Functions**: Always use new function syntax with validators:
 ```typescript
@@ -83,16 +103,16 @@ export const myQuery = query({
 
 **Database Access**: Use `ctx.db` in queries/mutations. Actions cannot access the database directly - use `ctx.runQuery`/`ctx.runMutation`.
 
-**AI Chat**: The chat system uses Vercel AI SDK with tool calling. User API keys are encrypted at rest using AES-256-GCM (requires `AI_ENCRYPTION_KEY` env var in Convex dashboard).
+**Admin Authorization**: Use `requireAdmin()` from `convex/lib/admin.ts` for admin-only functions.
 
 ## Environment Variables
 
 **Local** (in `.env` or `.env.local`):
-- `VITE_CONVEX_URL` - Convex deployment URL (required, baked into build)
-- `PORT` - Server port for production (defaults to 3000)
+- `PUBLIC_CONVEX_URL` - Convex deployment URL (required, baked into build)
 
 **Convex Dashboard**:
-- `AI_ENCRYPTION_KEY` - For encrypting user API keys (generate with `openssl rand -hex 32`)
+- `BETTER_AUTH_SECRET` - Secret for Better Auth sessions
+- `SITE_URL` - Your app's URL (e.g., http://localhost:5173)
 - `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` - GitHub OAuth (optional)
 - `AUTH_AUTHENTIK_ID`, `AUTH_AUTHENTIK_SECRET`, `AUTH_AUTHENTIK_ISSUER` - Authentik OIDC (optional)
 
@@ -142,4 +162,11 @@ Uses Changesets for semantic versioning:
 bun run changeset        # Create a changeset
 bun run changeset:status # Check pending changesets
 bun run version          # Apply version bumps
+```
+
+### Admin Setup
+
+After first deployment, seed the first admin via Convex dashboard:
+```
+internal.admin.seedFirstAdmin({ email: "your-email@example.com" })
 ```

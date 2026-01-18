@@ -8,10 +8,12 @@
  * @module
  */
 
+import type * as admin from "../admin.js";
 import type * as aiSettings from "../aiSettings.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as http from "../http.js";
+import type * as lib_admin from "../lib/admin.js";
 import type * as lib_aiProvider from "../lib/aiProvider.js";
 import type * as lib_encryption from "../lib/encryption.js";
 import type * as lib_logger from "../lib/logger.js";
@@ -33,10 +35,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  admin: typeof admin;
   aiSettings: typeof aiSettings;
   auth: typeof auth;
   chat: typeof chat;
   http: typeof http;
+  "lib/admin": typeof lib_admin;
   "lib/aiProvider": typeof lib_aiProvider;
   "lib/encryption": typeof lib_encryption;
   "lib/logger": typeof lib_logger;
