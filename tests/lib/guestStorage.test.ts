@@ -145,4 +145,60 @@ describe('guestStorage', () => {
       expect(() => clearGuestData()).not.toThrow();
     });
   });
+
+  describe('hasGuestData', () => {
+    it('returns false when no data exists', () => {
+      expect(hasGuestData()).toBe(false);
+    });
+
+    it('returns false when data exists but isGuestMode is false', () => {
+      const testData: GuestData = {
+        subscriptions: [],
+        paymentMethods: [],
+        isGuestMode: false,
+        createdAt: Date.now(),
+      };
+      saveGuestData(testData);
+
+      expect(hasGuestData()).toBe(false);
+    });
+
+    it('returns true when data exists and isGuestMode is true', () => {
+      const testData: GuestData = {
+        subscriptions: [],
+        paymentMethods: [],
+        isGuestMode: true,
+        createdAt: Date.now(),
+      };
+      saveGuestData(testData);
+
+      expect(hasGuestData()).toBe(true);
+    });
+  });
+
+  describe('initGuestData', () => {
+    it('creates initial guest data structure', () => {
+      const result = initGuestData();
+
+      expect(result.subscriptions).toEqual([]);
+      expect(result.paymentMethods).toEqual([]);
+      expect(result.isGuestMode).toBe(true);
+      expect(typeof result.createdAt).toBe('number');
+    });
+
+    it('saves data to localStorage', () => {
+      initGuestData();
+
+      expect(hasGuestData()).toBe(true);
+    });
+
+    it('sets createdAt to current time', () => {
+      const before = Date.now();
+      const result = initGuestData();
+      const after = Date.now();
+
+      expect(result.createdAt).toBeGreaterThanOrEqual(before);
+      expect(result.createdAt).toBeLessThanOrEqual(after);
+    });
+  });
 });
