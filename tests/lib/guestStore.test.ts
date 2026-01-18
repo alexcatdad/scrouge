@@ -20,6 +20,9 @@ import {
   getActiveSubscriptions,
   getTotalMonthlyCost,
   getUpcomingSubscriptions,
+  getIsInitialized,
+  getAllGuestDataForMigration,
+  getPaymentMethodById,
 } from '../../src/lib/guestStore.svelte';
 import { clearGuestData } from '../../src/lib/guestStorage';
 
@@ -646,6 +649,156 @@ describe('guestStore - Calculations', () => {
 
       const upcoming = getUpcomingSubscriptions();
       expect(upcoming.map(s => s.name)).toEqual(['First', 'Second', 'Third']);
+    });
+  });
+});
+
+describe('guestStore - State Management', () => {
+  beforeEach(() => {
+    localStorageMock.clear();
+  });
+
+  afterEach(() => {
+    disableGuestMode();
+    localStorageMock.clear();
+  });
+
+  describe('enableGuestMode / disableGuestMode', () => {
+    it('enableGuestMode sets isGuestMode to true', () => {
+      expect(getIsGuestMode()).toBe(false);
+      enableGuestMode();
+      expect(getIsGuestMode()).toBe(true);
+    });
+
+    it('disableGuestMode clears all data', () => {
+      enableGuestMode();
+      addPaymentMethod({
+        name: 'Test Card',
+        type: 'credit_card',
+        isDefault: true,
+      });
+      addSubscription({
+        name: 'Test Sub',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      disableGuestMode();
+
+      expect(getIsGuestMode()).toBe(false);
+      expect(getGuestPaymentMethods()).toHaveLength(0);
+      expect(getGuestSubscriptions()).toHaveLength(0);
+    });
+  });
+
+  describe('initGuestStore', () => {
+    it('loads existing guest data from localStorage', () => {
+      // Pre-populate localStorage
+      const existingData = {
+        subscriptions: [{
+          localId: 'existing_sub',
+          name: 'Existing',
+          cost: 10,
+          currency: 'USD',
+          billingCycle: 'monthly',
+          nextBillingDate: Date.now(),
+          paymentMethodLocalId: 'pm_1',
+          category: 'other',
+          isActive: true,
+        }],
+        paymentMethods: [{
+          localId: 'existing_pm',
+          name: 'Existing Card',
+          type: 'credit_card',
+          isDefault: true,
+        }],
+        isGuestMode: true,
+        createdAt: Date.now(),
+      };
+      localStorageMock.setItem('scrouge_guest_data', JSON.stringify(existingData));
+
+      initGuestStore();
+
+      expect(getIsGuestMode()).toBe(true);
+      expect(getGuestSubscriptions()).toHaveLength(1);
+      expect(getGuestPaymentMethods()).toHaveLength(1);
+    });
+  });
+
+  describe('getAllGuestDataForMigration', () => {
+    it('returns copies of all data', () => {
+      enableGuestMode();
+      const pm = addPaymentMethod({
+        name: 'Card',
+        type: 'credit_card',
+        isDefault: true,
+      });
+      const sub = addSubscription({
+        name: 'Sub',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: pm.localId,
+        category: 'other',
+        isActive: true,
+      });
+
+      const migrationData = getAllGuestDataForMigration();
+
+      expect(migrationData.subscriptions).toHaveLength(1);
+      expect(migrationData.paymentMethods).toHaveLength(1);
+      expect(migrationData.subscriptions[0].name).toBe('Sub');
+      expect(migrationData.paymentMethods[0].name).toBe('Card');
+    });
+
+    it('returns empty arrays when no data', () => {
+      enableGuestMode();
+      const migrationData = getAllGuestDataForMigration();
+
+      expect(migrationData.subscriptions).toEqual([]);
+      expect(migrationData.paymentMethods).toEqual([]);
+    });
+  });
+
+  describe('getter functions', () => {
+    it('getPaymentMethodById returns correct method', () => {
+      enableGuestMode();
+      const pm = addPaymentMethod({
+        name: 'Find Me',
+        type: 'credit_card',
+        isDefault: true,
+      });
+
+      const found = getPaymentMethodById(pm.localId);
+      expect(found?.name).toBe('Find Me');
+    });
+
+    it('getPaymentMethodById returns undefined for nonexistent', () => {
+      enableGuestMode();
+      expect(getPaymentMethodById('nonexistent')).toBeUndefined();
+    });
+
+    it('getSubscriptionById returns correct subscription', () => {
+      enableGuestMode();
+      const sub = addSubscription({
+        name: 'Find Me',
+        cost: 10,
+        currency: 'USD',
+        billingCycle: 'monthly',
+        nextBillingDate: Date.now(),
+        paymentMethodLocalId: 'pm_1',
+        category: 'other',
+        isActive: true,
+      });
+
+      const found = getSubscriptionById(sub.localId);
+      expect(found?.name).toBe('Find Me');
     });
   });
 });
