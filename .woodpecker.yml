@@ -1,0 +1,77 @@
+# Woodpecker CI Pipeline
+# Mirrors the GitHub Actions CI pipeline for guest mode testing
+
+when:
+  - event: [push, pull_request]
+    branch: main
+
+variables:
+  - &node_image "oven/bun:latest"
+  - &playwright_image "mcr.microsoft.com/playwright:v1.49.1-noble"
+
+# Clone with full history for better caching
+clone:
+  git:
+    image: woodpeckerci/plugin-git
+    settings:
+      depth: 50
+
+steps:
+  # ============================================
+  # Quality Gate: Type Check and Unit Tests
+  # ============================================
+  quality:
+    image: *node_image
+    environment:
+      PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
+    commands:
+      - bun install --frozen-lockfile
+      - bun run check
+      - bun run test:coverage
+    when:
+      - event: [push, pull_request]
+
+  # ============================================
+  # Security Scanning
+  # ============================================
+  security:
+    image: *node_image
+    failure: ignore
+    commands:
+      - bun install --frozen-lockfile
+      - bunx audit-ci --config audit-ci.json || true
+    when:
+      - event: [push, pull_request]
+
+  # ============================================
+  # E2E Tests
+  # ============================================
+  e2e:
+    image: *playwright_image
+    environment:
+      PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
+      E2E_COVERAGE: "true"
+      CI: "true"
+    commands:
+      - npm install -g bun
+      - bun install --frozen-lockfile
+      - bun run test:e2e:coverage
+    when:
+      - event: [push, pull_request]
+    depends_on:
+      - quality
+
+  # ============================================
+  # Build Verification
+  # ============================================
+  build:
+    image: *node_image
+    environment:
+      PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
+    commands:
+      - bun install --frozen-lockfile
+      - bun run build
+    when:
+      - event: [push, pull_request]
+    depends_on:
+      - quality
