@@ -100,3 +100,49 @@ guestTest.describe("Guest Mode - Wizard", () => {
     await guestExpect(guestPage.locator("text=Add Payment Method").or(guestPage.locator("text=Confirm"))).toBeVisible({ timeout: 5000 });
   });
 });
+
+guestTest.describe("Guest Mode - Subscriptions", () => {
+  guestTest("guest can access subscriptions page", async ({ guestPage }) => {
+    await guestPage.goto("/dashboard/subscriptions");
+
+    // Should see the subscriptions header
+    await guestExpect(guestPage.locator("h1:has-text('Subscriptions')")).toBeVisible();
+  });
+
+  guestTest("guest sees empty state when no subscriptions", async ({ guestPage }) => {
+    await guestPage.goto("/dashboard/subscriptions");
+
+    // Should see empty state message
+    await guestExpect(guestPage.locator("text=No subscriptions yet")).toBeVisible();
+    await guestExpect(guestPage.locator("text=Add Subscription")).toBeVisible();
+  });
+
+  guestTest("guest can navigate to add subscription page", async ({ guestPage }) => {
+    await guestPage.goto("/dashboard/subscriptions");
+
+    // Click add subscription button
+    await guestPage.click("text=Add Subscription");
+
+    // Should be on the new subscription page
+    await guestExpect(guestPage).toHaveURL(/subscriptions\/new/);
+    await guestExpect(guestPage.locator("h1:has-text('Add Subscription')")).toBeVisible();
+  });
+
+  guestTest("guest can search services on add subscription page", async ({ guestPage }) => {
+    await guestPage.goto("/dashboard/subscriptions/new");
+
+    // Type in search box
+    const searchInput = guestPage.locator('input[placeholder*="Search services"]');
+    await searchInput.fill("Spotify");
+
+    // Should filter or show results
+    await guestExpect(searchInput).toHaveValue("Spotify");
+  });
+
+  guestTest("guest can access manual add option", async ({ guestPage }) => {
+    await guestPage.goto("/dashboard/subscriptions/new");
+
+    // Should see manual add option
+    await guestExpect(guestPage.locator("text=Add manually")).toBeVisible();
+  });
+});
