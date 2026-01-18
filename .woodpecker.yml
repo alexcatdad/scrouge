@@ -2,8 +2,12 @@
 # Mirrors the GitHub Actions CI pipeline for guest mode testing
 
 when:
-  - event: [push, pull_request]
+  - event: push
     branch: main
+  - event: pull_request
+    branch: main
+    exclude:
+      branch: renovate/*
 
 variables:
   - &node_image "oven/bun:latest"
