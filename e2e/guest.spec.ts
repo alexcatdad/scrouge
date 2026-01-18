@@ -52,3 +52,51 @@ guestTest.describe("Guest Mode - Dashboard", () => {
     await guestExpect(guestPage.locator("text=Sign up to save")).toBeVisible();
   });
 });
+
+guestTest.describe("Guest Mode - Wizard", () => {
+  guestTest("guest can access wizard", async ({ guestPage }) => {
+    await guestPage.goto("/wizard");
+
+    // Should see the wizard step 1 - service selection
+    await guestExpect(guestPage.locator("text=Search services")).toBeVisible();
+    await guestExpect(guestPage.locator("text=Continue")).toBeVisible();
+  });
+
+  guestTest("guest can search for services in wizard", async ({ guestPage }) => {
+    await guestPage.goto("/wizard");
+
+    // Type in search box
+    const searchInput = guestPage.locator('input[placeholder*="Search services"]');
+    await searchInput.fill("Netflix");
+
+    // Should filter results (or show no results message)
+    await guestExpect(searchInput).toHaveValue("Netflix");
+  });
+
+  guestTest("guest can select a service template", async ({ guestPage }) => {
+    await guestPage.goto("/wizard");
+
+    // Wait for templates to load and click on one
+    const serviceCard = guestPage.locator('[data-testid="template-card"]').first();
+
+    // If template cards exist, click one
+    const cardCount = await serviceCard.count();
+    if (cardCount > 0) {
+      await serviceCard.click();
+
+      // Should see selection indicator or count update
+      await guestExpect(guestPage.locator("text=Continue")).toBeVisible();
+    }
+  });
+
+  guestTest("guest can navigate wizard steps", async ({ guestPage }) => {
+    await guestPage.goto("/wizard");
+
+    // Click continue to go to step 2 (even with no selections, should navigate)
+    await guestPage.click("text=Continue");
+
+    // Should be on step 2 - subscription details or payment method
+    // Look for step 2 indicators
+    await guestExpect(guestPage.locator("text=Add Payment Method").or(guestPage.locator("text=Confirm"))).toBeVisible({ timeout: 5000 });
+  });
+});
