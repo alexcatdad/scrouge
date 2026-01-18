@@ -20,16 +20,29 @@ steps:
   # ============================================
   # Quality Gate: Type Check and Unit Tests
   # ============================================
-  quality:
+  typecheck:
     image: *node_image
     environment:
       PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
     commands:
       - bun install --frozen-lockfile
       - bun run check
-      - bun run test:coverage
     when:
       - event: [push, pull_request]
+
+  # Unit tests with coverage (requires Node.js for v8 coverage)
+  unit-tests:
+    image: node:22-slim
+    environment:
+      PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
+    commands:
+      - npm install -g bun
+      - bun install --frozen-lockfile
+      - npx vitest run --coverage
+    when:
+      - event: [push, pull_request]
+    depends_on:
+      - typecheck
 
   # ============================================
   # Security Scanning
@@ -59,7 +72,7 @@ steps:
     when:
       - event: [push, pull_request]
     depends_on:
-      - quality
+      - unit-tests
 
   # ============================================
   # Build Verification
@@ -74,4 +87,4 @@ steps:
     when:
       - event: [push, pull_request]
     depends_on:
-      - quality
+      - unit-tests
