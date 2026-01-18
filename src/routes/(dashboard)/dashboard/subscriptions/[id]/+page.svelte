@@ -221,7 +221,7 @@
 
 	function getIconUrl(ws: string | undefined): string {
 		if (!ws) return "";
-		return `https://logo.clearbit.com/${ws}`;
+		return `https://www.google.com/s2/favicons?domain=${ws}&sz=128`;
 	}
 </script>
 
