@@ -36,7 +36,7 @@ steps:
 
   # Unit tests with coverage (requires Node.js for v8 coverage)
   unit-tests:
-    image: node:22-slim
+    image: node:22.22.0-slim
     environment:
       PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
     commands:
