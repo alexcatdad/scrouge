@@ -25,7 +25,7 @@ steps:
     environment:
       PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
     commands:
-      - bun install --frozen-lockfile
+      - bun install
       - bun run check
     when:
       - event: [push, pull_request]
@@ -37,7 +37,7 @@ steps:
       PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
     commands:
       - npm install -g bun
-      - bun install --frozen-lockfile
+      - bun install
       - npx vitest run --coverage
     when:
       - event: [push, pull_request]
@@ -51,7 +51,7 @@ steps:
     image: *node_image
     failure: ignore
     commands:
-      - bun install --frozen-lockfile
+      - bun install
       - bunx audit-ci --config audit-ci.json || true
     when:
       - event: [push, pull_request]
@@ -67,7 +67,7 @@ steps:
       CI: "true"
     commands:
       - npm install -g bun
-      - bun install --frozen-lockfile
+      - bun install
       - bun run test:e2e:coverage
     when:
       - event: [push, pull_request]
@@ -82,7 +82,7 @@ steps:
     environment:
       PUBLIC_CONVEX_URL: https://placeholder.convex.cloud
     commands:
-      - bun install --frozen-lockfile
+      - bun install
       - bun run build
     when:
       - event: [push, pull_request]
