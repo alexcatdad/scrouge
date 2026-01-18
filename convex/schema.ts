@@ -157,6 +157,16 @@ const applicationTables = {
     ),
     createdAt: v.number(),
   }).index("by_status", ["status"]),
+
+  // User roles for admin access control
+  userRoles: defineTable({
+    userId: v.id("users"),
+    role: v.union(v.literal("admin"), v.literal("user")),
+    grantedAt: v.number(),
+    grantedBy: v.optional(v.id("users")),
+  })
+    .index("by_user", ["userId"])
+    .index("by_role", ["role"]),
 };
 
 export default defineSchema({
