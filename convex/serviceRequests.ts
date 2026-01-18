@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
+import { requireAdmin } from "./lib/admin";
 
 async function getLoggedInUser(ctx: QueryCtx | MutationCtx) {
   const userId = await getAuthUserId(ctx);
@@ -30,7 +31,7 @@ export const create = mutation({
   },
 });
 
-// List pending requests for admin
+// List pending requests - ADMIN ONLY
 export const listPending = query({
   args: {},
   returns: v.array(
@@ -42,11 +43,68 @@ export const listPending = query({
     }),
   ),
   handler: async (ctx) => {
-    await getLoggedInUser(ctx);
+    // Require admin access
+    await requireAdmin(ctx);
 
     return await ctx.db
       .query("serviceRequests")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+  },
+});
+
+// Approve a service request - ADMIN ONLY
+export const approve = mutation({
+  args: {
+    requestId: v.id("serviceRequests"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    await ctx.db.patch(args.requestId, {
+      status: "approved",
+    });
+
+    return null;
+  },
+});
+
+// Reject a service request - ADMIN ONLY
+export const reject = mutation({
+  args: {
+    requestId: v.id("serviceRequests"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    await ctx.db.patch(args.requestId, {
+      status: "rejected",
+    });
+
+    return null;
+  },
+});
+
+// List user's own requests
+export const listMine = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("serviceRequests"),
+      serviceName: v.string(),
+      website: v.optional(v.string()),
+      status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+      createdAt: v.number(),
+    }),
+  ),
+  handler: async (ctx) => {
+    const userId = await getLoggedInUser(ctx);
+
+    return await ctx.db
+      .query("serviceRequests")
+      .filter((q) => q.eq(q.field("requestedBy"), userId))
       .collect();
   },
 });
