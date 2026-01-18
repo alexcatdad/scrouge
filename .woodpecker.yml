@@ -57,7 +57,7 @@ steps:
       - event: [push, pull_request]
 
   # ============================================
-  # E2E Tests
+  # E2E Tests (parallelized with sharding)
   # ============================================
   e2e:
     image: *playwright_image
@@ -68,11 +68,16 @@ steps:
     commands:
       - npm install -g bun
       - bun install
-      - bun run test:e2e:coverage
+      - rm -rf .nyc_output coverage-e2e
+      - mkdir -p .nyc_output
+      - E2E_COVERAGE=true bunx playwright test --shard=${SHARD}/3
+      - nyc report || true
     when:
       - event: [push, pull_request]
     depends_on:
       - unit-tests
+    matrix:
+      SHARD: [1, 2, 3]
 
   # ============================================
   # Build Verification
