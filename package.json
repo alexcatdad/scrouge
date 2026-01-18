@@ -27,6 +27,7 @@
 		"@types/node": "^25.0.9",
 		"@vitest/coverage-v8": "^4.0.17",
 		"dotenv": "^17.2.3",
+		"jsdom": "^27.4.0",
 		"svelte": "^5.45.6",
 		"svelte-check": "^4.3.4",
 		"tailwindcss": "^4.1.18",
