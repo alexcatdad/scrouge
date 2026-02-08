@@ -1,0 +1,8 @@
+{
+  "$schema": "https://alexcatdad.github.io/schemas/project-meta.schema.json",
+  "what": "Subscription tracker with smart notifications and spending analytics.",
+  "why": "Tracks recurring subscriptions and surfaces spending insights across payment methods.",
+  "tags": ["sveltekit", "svelte", "convex", "better-auth"],
+  "featured": false,
+  "order": 65
+}
