@@ -1,0 +1,12 @@
+{
+  "what": "Subscription tracker application for managing recurring services and billing visibility.",
+  "why": "Built to monitor subscription spend and reduce unnoticed recurring cost growth.",
+  "tags": [
+    "sveltekit",
+    "convex",
+    "subscriptions",
+    "finance"
+  ],
+  "featured": false,
+  "order": 50
+}
