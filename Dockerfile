@@ -21,7 +21,7 @@ ENV PUBLIC_CONVEX_URL=$PUBLIC_CONVEX_URL
 RUN bun run build
 
 # Production stage
-FROM node:22-alpine AS production
+FROM node:25-alpine AS production
 
 WORKDIR /app
 
